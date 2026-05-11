@@ -190,6 +190,7 @@
     background: var(--bg-panel);
     border: 1px solid var(--rule);
     padding: 22px 24px 20px;
+    position: relative;
   }
 
   .panel-header {
@@ -222,21 +223,92 @@
     width: 100%;
     height: auto;
     display: block;
-    background: var(--bg);
+    background: transparent;
+  }
+
+  .ocean-sphere {
+    fill: #ccd8e0;
+    stroke: var(--rule-strong);
+    stroke-width: 0.6;
+  }
+
+  .land-fill {
+    fill: #e8e4da;
+    stroke: none;
+  }
+
+  .cell {
+    fill-opacity: 0.92; /* nearly solid so colors read clearly */
   }
 
   .country-stroke {
     fill: none;
-    stroke: rgba(0,0,0,0.45);
-    stroke-width: 0.5;
+    stroke: rgba(20,20,20,0.55);
+    stroke-width: 0.65;
     pointer-events: none;
+    vector-effect: non-scaling-stroke;
   }
 
   .graticule {
     fill: none;
-    stroke: rgba(0,0,0,0.06);
+    stroke: rgba(0,0,0,0.07);
+    stroke-width: 0.4;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .polar-split .ocean-sphere {
+    fill: #c8dce8;
+    stroke: #9fbfcc;
+    stroke-width: 0.3;
+  }
+
+  .polar-split .land-fill {
+    fill: #dddad1;
+  }
+
+  .polar-split .country-stroke {
+    stroke: rgba(60,60,60,0.45);
     stroke-width: 0.5;
   }
+
+  .polar-split .cell {
+    fill-opacity: 1;
+  }
+
+  .region-highlight {
+    fill: rgba(200,68,42,0.08);
+    stroke: var(--accent);
+    stroke-width: 1;
+    stroke-dasharray: 4,3;
+    pointer-events: none;
+  }
+
+  .ice-explainer {
+    margin-top: 24px;
+    padding: 20px 24px;
+    background: var(--bg-panel);
+    border: 1px solid var(--rule);
+    border-left: 3px solid #185FA5;
+    display: none;
+  }
+
+  .ice-explainer h3 {
+    font-family: var(--display);
+    font-size: 16px;
+    font-weight: 400;
+    margin: 0 0 10px;
+    color: var(--ink);
+  }
+
+  .ice-explainer p {
+    font-size: 14px;
+    color: var(--ink-soft);
+    margin: 0;
+    line-height: 1.6;
+    max-width: 860px;
+  }
+
+  .ice-explainer strong { color: var(--ink); }
 
   .region-brush .selection {
     fill: var(--ink);
@@ -423,6 +495,7 @@
       <select id="feature-select">
         <option value="tas">Temperature anomaly</option>
         <option value="pr">Precipitation anomaly</option>
+        <option value="siconc">Sea ice concentration</option>
       </select>
     </div>
 
@@ -430,6 +503,7 @@
       <span class="control-label">Decade</span>
       <div class="year-readout" id="year-readout">2090s</div>
     </div>
+
   </div>
 
   <div class="viz-grid">
@@ -438,7 +512,7 @@
         <h2 class="panel-title" id="map-title">Temperature anomaly map</h2>
         <span class="panel-subtitle" id="map-subtitle">Δ°C vs 1850–1900 baseline</span>
       </div>
-      <svg id="map-svg" viewBox="0 0 720 420"></svg>
+      <svg id="map-svg" viewBox="0 0 720 370"></svg>
       <svg id="legend-svg" viewBox="0 0 720 50" style="width: 100%; height: 40px; display: block; margin-top: 8px;"></svg>
     </div>
 
@@ -449,16 +523,22 @@
         </h2>
         <button class="clear-brush" id="clear-region" style="display:none;">Clear region</button>
       </div>
-      <svg id="line-svg" viewBox="0 0 480 420"></svg>
+      <svg id="line-svg" viewBox="0 0 490 420"></svg>
     </div>
   </div>
 
-  <div class="notes">
-    <strong>How to read this.</strong>
-    The map shows the chosen feature averaged over the selected decade, expressed as a change relative to the 1850–1900 baseline.
-    The line plot shows the global average over time for all three emissions scenarios — drag the year brush on the line plot to scrub through time, or
-    drag a rectangle on the map to filter the line plot to that region instead of the globe.
-    <strong>Data:</strong> synthetic placeholder using CMIP6-realistic warming patterns; final version will use CESM2 + multi-model ensemble exported from Colab.
+  <div class="notes" id="notes-box">
+    <span id="notes-body"></span>
+  </div>
+
+  <div class="ice-explainer" id="ice-explainer">
+    <h3>Why disappearing Arctic ice matters</h3>
+    <p>
+      <strong>Albedo feedback:</strong> Sea ice is bright white and reflects ~80% of incoming sunlight back to space. When it melts, the dark ocean absorbs ~94% of that energy instead — dramatically accelerating warming in a self-reinforcing loop.
+      <strong>Ocean circulation:</strong> Freshwater from melting ice disrupts the Atlantic thermohaline circulation, which moderates climate across Europe and North America.
+      <strong>Ecosystem collapse:</strong> Polar bears, seals, and entire food webs depend on sea ice for hunting, breeding, and survival. Under SSP5-8.5, the Arctic is projected to be <em>ice-free in summer before 2050</em>.
+      <strong>Sea-level rise:</strong> While Arctic sea ice doesn't directly raise sea levels when it melts (it's already floating), its loss accelerates land-ice melt in Greenland, which <em>does</em> add to global sea levels.
+    </p>
   </div>
 
 </div>
@@ -506,14 +586,13 @@ const state = {
 // MAP
 // =====================================================================
 const mapSvg = d3.select('#map-svg');
-const MAP_W = 720, MAP_H = 420;
+const MAP_W = 720, MAP_H = 370;
 const projection = d3.geoNaturalEarth1()
-  .scale(135)
-  .translate([MAP_W / 2, MAP_H / 2 + 5]);
+  .fitExtent([[2, 2], [MAP_W - 2, MAP_H - 2]], {type: 'Sphere'});
 const pathGen = d3.geoPath(projection);
 
-// Cell width/height in degrees
-const DLON = 3.75, DLAT = 3.75;
+// Cell width/height in degrees (matches the actual CESM2 grid spacing)
+const DLON = 5.0, DLAT = 3.77;
 
 // Pre-compute screen positions for grid cells
 function cellRect(latIdx, lonIdx) {
@@ -527,52 +606,221 @@ function cellRect(latIdx, lonIdx) {
 
 // Color scales
 const SCALES = {
-  tas: { domain: [-6, 6], interp: d3.interpolateRdBu, reverse: true, label: 'Δ°C', fmt: d => d3.format('+.1f')(d) + '°C' },
-  pr:  { domain: [-30, 30], interp: d3.interpolateBrBG, reverse: false, label: 'Δ% precip', fmt: d => d3.format('+.0f')(d) + '%' }
+  tas:    { domain: [-6, 6],    interp: d3.interpolateRdBu,  reverse: true,  label: 'Δ°C',        fmt: d => d3.format('+.1f')(d) + '°C' },
+  pr:     { domain: [-30, 30],  interp: d3.interpolateBrBG,  reverse: false, label: 'Δ% precip',  fmt: d => d3.format('+.0f')(d) + '%'  },
+  siconc: { domain: [1, 85],
+             interp: d3.interpolateRgbBasis(['#f5f0e8','#c8dff0','#85b7eb','#185FA5','#042C53']),
+             reverse: false, label: '% ice cover', fmt: d => d3.format('.0f')(d) + '%' }
 };
+
+// Per-feature display metadata
+const FEATURE_META = {
+  tas: {
+    title: 'Temperature anomaly map',
+    sub: 'Δ°C vs 1850–1900 baseline',
+    notes: `<strong>Temperature anomaly.</strong> Each cell shows how much warmer (red) or cooler (blue) that region is compared to the 1850–1900 pre-industrial baseline. The global average is already ~1.3°C above baseline today. Drag a box on the map to filter the line chart to that region, or click the time axis to jump to a decade.`
+  },
+  pr: {
+    title: 'Precipitation anomaly map',
+    sub: 'Δ% vs 1850–1900 baseline',
+    notes: `<strong>Precipitation anomaly.</strong> Blue cells receive more rainfall or snowfall than the pre-industrial baseline; brown cells receive less. A warmer atmosphere holds ~7% more moisture per 1°C, so wet regions tend to get wetter and dry regions drier. Drag a region on the map to see its precipitation trajectory over time.`
+  },
+  siconc: {
+    title: 'Sea ice concentration map',
+    sub: '% ocean covered by ice (Arctic region)',
+    notes: `<strong>Sea ice concentration.</strong> Dark-blue cells are mostly ice-covered; white/light cells are open ocean. Values show the percentage of ocean area covered by sea ice averaged over each decade. The time series shows area-weighted Arctic (>50°N) mean ice cover — under SSP5-8.5, the Arctic loses most of its summer sea ice by mid-century. Data: CanESM5, SImon table, CMIP6.`
+  }
+};
+
+function updateNotes(feature) {
+  document.getElementById('notes-body').innerHTML = FEATURE_META[feature]?.notes ?? '';
+}
 
 function colorFor(value, feature) {
   const s = SCALES[feature];
   const t = (value - s.domain[0]) / (s.domain[1] - s.domain[0]);
-  const clamped = Math.max(0, Math.min(1, t));
+  // Clamp to [0.05, 0.95] so extremes are vivid but never go near-black
+  const clamped = 0.05 + Math.max(0, Math.min(1, t)) * 0.90;
   return s.interp(s.reverse ? 1 - clamped : clamped);
 }
 
-// Layer groups
+// Layer groups — order: graticule → land fill → data cells → country outlines
 const gMap = mapSvg.append('g');
 const gGraticule = gMap.append('g').attr('class', 'graticule-layer');
-const gCells = gMap.append('g').attr('class', 'cells-layer');
+const gLandFill  = gMap.append('g').attr('class', 'land-fill-layer');
+const gCells     = gMap.append('g').attr('class', 'cells-layer');
 const gCountries = gMap.append('g').attr('class', 'countries-layer');
-const gBrush = mapSvg.append('g').attr('class', 'region-brush');
+const gBrush     = mapSvg.append('g').attr('class', 'region-brush');
+const gRegionHL  = mapSvg.append('g').attr('class', 'region-hl-layer');
 
-// Graticule
-const graticule = d3.geoGraticule().step([30, 30]);
+
+function updateRegionHighlight() {
+  gRegionHL.selectAll('*').remove();
+  if (!state.region || state.feature === 'siconc') return;
+  const r = state.region;
+  const corners = [
+    projection([r.lon0, r.lat1]),
+    projection([r.lon1, r.lat1]),
+    projection([r.lon1, r.lat0]),
+    projection([r.lon0, r.lat0]),
+  ];
+  if (corners.some(c => !c)) return;
+  const xs = corners.map(c => c[0]);
+  const ys = corners.map(c => c[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs);
+  const y0 = Math.min(...ys), y1 = Math.max(...ys);
+  gRegionHL.append('rect')
+    .attr('class', 'region-highlight')
+    .attr('x', x0).attr('y', y0)
+    .attr('width', x1 - x0).attr('height', y1 - y0);
+}
+
+// ── Polar split view (siconc only) ───────────────────────────────────────────
+const polDefs = mapSvg.append('defs');
+polDefs.append('clipPath').attr('id', 'cp-arctic')
+  .append('rect').attr('x', 0).attr('y', 0).attr('width', MAP_W).attr('height', MAP_H / 2 - 1);
+polDefs.append('clipPath').attr('id', 'cp-antarctic')
+  .append('rect').attr('x', 0).attr('y', MAP_H / 2 + 1).attr('width', MAP_W).attr('height', MAP_H / 2);
+
+// Marginal ice zone hatch pattern (diagonal lines for 5–20% cells)
+const mizPattern = polDefs.append('pattern')
+  .attr('id', 'miz-hatch').attr('patternUnits', 'userSpaceOnUse')
+  .attr('width', 4).attr('height', 4).attr('patternTransform', 'rotate(45)');
+mizPattern.append('line')
+  .attr('x1', 0).attr('y1', 0).attr('x2', 0).attr('y2', 4)
+  .attr('stroke', 'rgba(255,255,255,0.45)').attr('stroke-width', 1);
+
+const gPolar = mapSvg.append('g').attr('class', 'polar-split').style('display', 'none');
+
+// Divider line between Arctic and Antarctic panels
+gPolar.append('line')
+  .attr('x1', 0).attr('x2', MAP_W).attr('y1', MAP_H / 2).attr('y2', MAP_H / 2)
+  .attr('stroke', 'var(--rule-strong)').attr('stroke-width', 0.5).attr('stroke-dasharray', '3,3');
+
+// Panel labels — drawn on top of clip groups so they're always visible
+const POLAR_LABEL_STYLE = g => g
+  .attr('font-family', 'var(--mono)').attr('font-size', 12).attr('font-weight', 500)
+  .attr('fill', 'var(--ink-soft)').attr('letter-spacing', '0.12em');
+// Labels appended last (after clip groups) so they render on top
+function addPolarLabels() {
+  POLAR_LABEL_STYLE(gPolar.append('text').attr('x', 10).attr('y', 20).attr('text-anchor','start')).text('ARCTIC');
+  POLAR_LABEL_STYLE(gPolar.append('text').attr('x', 10).attr('y', MAP_H / 2 + 20).attr('text-anchor','start')).text('ANTARCTIC');
+}
+
+// Arctic panel — outer (clip) → inner (zoom transform)
+const gArcticOuter = gPolar.append('g').attr('clip-path', 'url(#cp-arctic)');
+const gArcticInner = gArcticOuter.append('g');
+gArcticInner.append('path').datum({type:'Sphere'}).attr('class','ocean-sphere').attr('d', pathGen);
+const gArcticLand  = gArcticInner.append('g');
+const gArcticCellsP = gArcticInner.append('g');
+const gArcticMIZ    = gArcticInner.append('g');   // MIZ hatch overlay
+const gArcticBorder = gArcticInner.append('g');
+
+// Antarctic panel — outer (clip) → inner (zoom transform)
+const gAntarcticOuter = gPolar.append('g').attr('clip-path', 'url(#cp-antarctic)');
+const gAntarcticInner = gAntarcticOuter.append('g');
+gAntarcticInner.append('path').datum({type:'Sphere'}).attr('class','ocean-sphere').attr('d', pathGen);
+const gAntarcticLand    = gAntarcticInner.append('g');
+const gAntarcticCellsP  = gAntarcticInner.append('g');
+const gAntarcticMIZ     = gAntarcticInner.append('g'); // MIZ hatch overlay
+const gAntarcticBorder  = gAntarcticInner.append('g');
+
+addPolarLabels();
+
+const ICE_ZOOM = 2.2;
+
+function applyPolarTransforms() {
+  const [pxA, pyA] = projection([0,  70]);
+  gArcticInner.attr('transform',
+    `translate(${(MAP_W/2 - pxA*ICE_ZOOM).toFixed(1)},${(MAP_H/4 - pyA*ICE_ZOOM).toFixed(1)}) scale(${ICE_ZOOM})`);
+
+  const [pxB, pyB] = projection([0, -70]);
+  gAntarcticInner.attr('transform',
+    `translate(${(MAP_W/2 - pxB*ICE_ZOOM).toFixed(1)},${(3*MAP_H/4 - pyB*ICE_ZOOM).toFixed(1)}) scale(${ICE_ZOOM})`);
+}
+
+// Ocean sphere — fills the globe shape only, so the SVG background stays transparent
 gGraticule.append('path')
-  .datum(graticule())
+  .datum({ type: 'Sphere' })
+  .attr('class', 'ocean-sphere')
+  .attr('d', pathGen);
+
+// Graticule lines
+gGraticule.append('path')
+  .datum(d3.geoGraticule().step([30, 30])())
   .attr('class', 'graticule')
   .attr('d', pathGen);
 
-// Load coastlines
+// Land fill + country outlines
 d3.json('https://cdn.jsdelivr.net/npm/world-atlas@2/land-110m.json').then(world => {
   const land = topojson.feature(world, world.objects.land);
-  gCountries.append('path')
-    .datum(land)
-    .attr('class', 'country-stroke')
-    .attr('d', pathGen);
+  gLandFill.append('path').datum(land).attr('class', 'land-fill').attr('d', pathGen);
+  gCountries.append('path').datum(land).attr('class', 'country-stroke').attr('d', pathGen);
+  // Also populate polar panel land layers
+  gArcticLand.append('path').datum(land).attr('class', 'land-fill').attr('d', pathGen);
+  gArcticBorder.append('path').datum(land).attr('class', 'country-stroke').attr('d', pathGen);
+  gAntarcticLand.append('path').datum(land).attr('class', 'land-fill').attr('d', pathGen);
+  gAntarcticBorder.append('path').datum(land).attr('class', 'country-stroke').attr('d', pathGen);
+
+  // Ocean clip path: sphere minus land via evenodd rule — combined as one path string
+  // so land cells act as holes. Applied to ice cell groups so ice never renders over land.
+  polDefs.append('clipPath').attr('id', 'cp-ocean')
+    .append('path')
+    .attr('clip-rule', 'evenodd')
+    .attr('d', pathGen({type: 'Sphere'}) + ' ' + pathGen(land));
+  [gArcticCellsP, gArcticMIZ, gAntarcticCellsP, gAntarcticMIZ].forEach(g =>
+    g.attr('clip-path', 'url(#cp-ocean)')
+  );
 });
+
+function placeMIZ(group, cells) {
+  const miz = cells.filter(d => d.value >= 5 && d.value <= 20);
+  group.selectAll('rect.miz-cell').data(miz, d => `${d.latIdx}-${d.lonIdx}`)
+    .join('rect').attr('class', 'miz-cell')
+    .attr('x', d => d.x).attr('y', d => d.y)
+    .attr('width', d => Math.max(0.5, d.w + 0.5))
+    .attr('height', d => Math.max(0.5, d.h + 0.5))
+    .attr('fill', 'url(#miz-hatch)')
+    .attr('pointer-events', 'none');
+}
 
 // Draw cells (initial)
 function getActiveField() {
-  // Determine which scenario field to draw based on decade.
-  // JSON keys are strings, so we coerce.
   const decKey = String(state.decade);
-  if (state.decade < 2015) return FIELDS[state.feature].historical[decKey];
-  return FIELDS[state.feature][state.scenario][decKey];
+  const featureData = FIELDS[state.feature];
+  if (!featureData) return null; // feature not yet exported (e.g. siconc)
+  if (state.decade < 2015) return featureData.historical?.[decKey] ?? null;
+  return featureData[state.scenario]?.[decKey] ?? null;
+}
+
+function animateMapZoom(feature) {
+  gMap.transition().duration(700).ease(d3.easeCubicInOut)
+    .attr('transform', 'translate(0,0) scale(1)');
+}
+
+function placeCells(group, cells, feature, iceOnly) {
+  const sel = group.selectAll('rect.cell').data(
+    iceOnly ? cells.filter(d => d.value > 0.5) : cells,
+    d => `${d.latIdx}-${d.lonIdx}`
+  );
+  sel.exit().remove();
+  sel.enter()
+    .append('rect').attr('class', 'cell')
+    .attr('x', d => d.x).attr('y', d => d.y)
+    .attr('width',  d => Math.max(0.5, d.w + 0.5))
+    .attr('height', d => Math.max(0.5, d.h + 0.5))
+    .on('mouseenter', (e, d) => showTooltip(e, d))
+    .on('mousemove',  (e, d) => showTooltip(e, d))
+    .on('mouseleave', hideTooltip)
+    .merge(sel)
+    .attr('fill', d => colorFor(d.value, feature));
 }
 
 function drawMap() {
   const field = getActiveField();
-  if (!field) return;
+
+  d3.select('#map-panel').selectAll('.no-data-msg').remove();
+  if (!field) { gCells.selectAll('rect.cell').remove(); return; }
 
   const cells = [];
   for (let i = 0; i < N_LAT; i++) {
@@ -584,19 +832,31 @@ function drawMap() {
     }
   }
 
-  const sel = gCells.selectAll('rect.cell').data(cells, d => `${d.latIdx}-${d.lonIdx}`);
-  sel.enter()
-    .append('rect')
-    .attr('class', 'cell')
-    .attr('x', d => d.x)
-    .attr('y', d => d.y)
-    .attr('width', d => Math.max(0.5, d.w + 0.5))
-    .attr('height', d => Math.max(0.5, d.h + 0.5))
-    .on('mouseenter', (e, d) => showTooltip(e, d))
-    .on('mousemove', (e, d) => showTooltip(e, d))
-    .on('mouseleave', hideTooltip)
-    .merge(sel)
-    .attr('fill', d => colorFor(d.value, state.feature));
+  if (state.feature === 'siconc') {
+    // Polar split view: hide global map, show Arctic + Antarctic panels
+    gMap.style('display', 'none');
+    gPolar.style('display', null);
+    applyPolarTransforms();
+    gCells.selectAll('rect.cell').remove();
+
+    const arcticCells    = cells.filter(d => d.lat > 42);
+    const antarcticCells = cells.filter(d => d.lat < -42);
+    placeCells(gArcticCellsP,    arcticCells,    'siconc', true);
+    placeCells(gAntarcticCellsP, antarcticCells, 'siconc', true);
+
+    // Marginal Ice Zone hatch overlay (5–20% cells)
+    placeMIZ(gArcticMIZ,    arcticCells);
+    placeMIZ(gAntarcticMIZ, antarcticCells);
+  } else {
+    // Normal global map
+    gMap.style('display', null);
+    gPolar.style('display', 'none');
+    gArcticCellsP.selectAll('rect.cell').remove();
+    gAntarcticCellsP.selectAll('rect.cell').remove();
+    gArcticMIZ.selectAll('*').remove();
+    gAntarcticMIZ.selectAll('*').remove();
+    placeCells(gCells, cells, state.feature, false);
+  }
 }
 
 // Tooltip
@@ -641,11 +901,17 @@ function brushEnded(event) {
   };
   d3.select('#region-badge').style('display', 'inline-block');
   d3.select('#clear-region').style('display', 'inline-block');
+  updateRegionHighlight();
   drawLine();
 }
 
 d3.select('#clear-region').on('click', () => {
+  state.region = null;
+  d3.select('#region-badge').style('display', 'none');
+  d3.select('#clear-region').style('display', 'none');
   gBrush.call(regionBrush.move, null);
+  updateRegionHighlight();
+  drawLine();
 });
 
 // Map legend
@@ -700,8 +966,8 @@ function drawLegend() {
 // LINE CHART
 // =====================================================================
 const lineSvg = d3.select('#line-svg');
-const LINE_W = 480, LINE_H = 420;
-const MARGIN = { top: 16, right: 70, bottom: 50, left: 44 };
+const LINE_W = 490, LINE_H = 420;
+const MARGIN = { top: 16, right: 72, bottom: 50, left: 66 };
 const PLOT_W = LINE_W - MARGIN.left - MARGIN.right;
 const PLOT_H = LINE_H - MARGIN.top - MARGIN.bottom;
 
@@ -723,10 +989,15 @@ gPlot.append('line')
 gPlot.append('text')
   .attr('class', 'axis-y-label')
   .attr('transform', 'rotate(-90)')
-  .attr('y', -32)
+  .attr('y', -54)
   .attr('x', -PLOT_H / 2)
   .attr('text-anchor', 'middle')
   .text('Anomaly');
+
+function updateChartLabel(feature) {
+  const labels = { tas: 'Anomaly (°C)', pr: 'Anomaly (%)', siconc: 'Arctic ice cover (%)' };
+  gPlot.select('.axis-y-label').text(labels[feature] ?? 'Anomaly');
+}
 
 const lineGen = d3.line()
   .x(d => xScale(d.year))
@@ -764,11 +1035,37 @@ function timeseriesForRegion(scen, feature, region) {
 
 function drawLine() {
   const region = state.region;
-  // Update y domain based on feature
+
+  // siconc: show placeholder if data not available
+  if (state.feature === 'siconc' && !FIELDS.siconc) {
+    gLines.selectAll('*').remove();
+    gLabels.selectAll('*').remove();
+    gMarker.selectAll('*').remove();
+    gXAxis.selectAll('*').remove();
+    gYAxis.selectAll('*').remove();
+    gPlot.select('.zero-line').style('display', 'none');
+    gPlot.selectAll('.no-data-label').data([1]).join('text')
+      .attr('class', 'no-data-label')
+      .attr('x', PLOT_W / 2).attr('y', PLOT_H / 2)
+      .attr('text-anchor', 'middle')
+      .attr('fill', 'var(--ink-faint)')
+      .attr('font-family', 'var(--serif)')
+      .attr('font-size', 13)
+      .text('Export siconc from notebook to see ice time series');
+    return;
+  }
+  gPlot.selectAll('.no-data-label').remove();
+
+  // Update y domain and zero-line based on feature
   if (state.feature === 'tas') {
-    yScale.domain(region ? [-1, 10] : [-1, 6]);
+    yScale.domain(region ? [-5, 12] : [-5, 5]);
+    gPlot.select('.zero-line').style('display', null);
+  } else if (state.feature === 'siconc') {
+    yScale.domain(region ? [0, 100] : [0, 55]);
+    gPlot.select('.zero-line').style('display', 'none');
   } else {
     yScale.domain([-25, 25]);
+    gPlot.select('.zero-line').style('display', null);
   }
 
   gXAxis.call(d3.axisBottom(xScale).tickFormat(d3.format('d')).ticks(6));
@@ -795,6 +1092,28 @@ function drawLine() {
     for (const scen of SCENARIOS) {
       series[scen] = gm[scen] || [];
     }
+  }
+
+  // siconc anomaly shading — blue above historical mean, amber below
+  gLines.selectAll('.siconc-area').remove();
+  if (state.feature === 'siconc' && hist.length > 0) {
+    const histMean = hist.reduce((s, d) => s + d.value, 0) / hist.length;
+    const activeData = [...hist, ...series[state.scenario]];
+    const areaAbove = d3.area().x(d => xScale(d.year))
+      .y0(yScale(histMean)).y1(d => yScale(Math.max(d.value, histMean)));
+    const areaBelow = d3.area().x(d => xScale(d.year))
+      .y0(yScale(histMean)).y1(d => yScale(Math.min(d.value, histMean)));
+    gLines.insert('path', ':first-child').attr('class', 'siconc-area')
+      .datum(activeData).attr('fill', 'rgba(24,95,165,0.18)').attr('stroke', 'none')
+      .attr('d', areaAbove);
+    gLines.insert('path', ':first-child').attr('class', 'siconc-area')
+      .datum(activeData).attr('fill', 'rgba(239,159,39,0.25)').attr('stroke', 'none')
+      .attr('d', areaBelow);
+    gLines.insert('line', ':first-child').attr('class', 'siconc-area')
+      .attr('x1', 0).attr('x2', PLOT_W)
+      .attr('y1', yScale(histMean)).attr('y2', yScale(histMean))
+      .attr('stroke', 'var(--ink-faint)').attr('stroke-width', 0.8)
+      .attr('stroke-dasharray', '3,3');
   }
 
   // Draw historical
@@ -903,12 +1222,20 @@ d3.selectAll('#scenario-toggle button').on('click', function() {
 
 d3.select('#feature-select').on('change', function() {
   state.feature = this.value;
-  d3.select('#map-title').text(
-    state.feature === 'tas' ? 'Temperature anomaly map' : 'Precipitation anomaly map'
-  );
-  d3.select('#map-subtitle').text(
-    state.feature === 'tas' ? 'Δ°C vs 1850–1900 baseline' : 'Δ% vs 1850–1900 baseline'
-  );
+  const meta = FEATURE_META[state.feature];
+  d3.select('#map-title').text(meta.title);
+  d3.select('#map-subtitle').text(meta.sub);
+  animateMapZoom(state.feature);
+  updateNotes(state.feature);
+  updateChartLabel(state.feature);
+  d3.select('#ice-explainer').style('display', state.feature === 'siconc' ? 'block' : 'none');
+  if (state.feature === 'siconc') {
+    state.region = null;
+    d3.select('#region-badge').style('display', 'none');
+    d3.select('#clear-region').style('display', 'none');
+    gBrush.call(regionBrush.move, null);
+  }
+  updateRegionHighlight();
   drawMap();
   drawLegend();
   drawLine();
@@ -925,6 +1252,10 @@ if (availableDecades.length && !availableDecades.includes(state.decade)) {
   d3.select('#year-readout').text(`${state.decade}s`);
 }
 
+updateNotes(state.feature);
+updateChartLabel(state.feature);
+d3.select('#ice-explainer').style('display', state.feature === 'siconc' ? 'block' : 'none');
+updateRegionHighlight();
 drawMap();
 drawLegend();
 drawLine();
