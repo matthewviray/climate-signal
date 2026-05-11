@@ -310,15 +310,16 @@
 
   .ice-explainer strong { color: var(--ink); }
 
+  /* Temporary brush rectangle is only for drag input; persistent selected regions
+     are drawn separately in .region-highlight. */
   .region-brush .selection {
-    fill: var(--ink);
-    fill-opacity: 0.08;
+    fill: transparent;
     stroke: var(--ink);
-    stroke-width: 1.5;
+    stroke-width: 1.2;
     stroke-dasharray: 3 3;
   }
 
-  .region-brush .handle { fill: var(--ink); fill-opacity: 0.3; }
+  .region-brush .handle { display: none; }
 
   /* Map legend */
   .legend-axis text {
@@ -365,8 +366,33 @@
   .scen-line-245 { fill: none; stroke: var(--scen-245); stroke-width: 1.8; }
   .scen-line-585 { fill: none; stroke: var(--scen-585); stroke-width: 1.8; }
 
-  .scen-line-dim { opacity: 0.25; }
+  .scen-line-dim { opacity: 0.55; }
   .scen-line-emphasis { stroke-width: 2.8; }
+
+  .global-compare-line {
+    fill: none;
+    stroke: var(--ink-faint);
+    stroke-width: 1.6;
+    stroke-dasharray: 5 4;
+  }
+
+  .region-line-0 {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 2.6;
+  }
+
+  .region-line-1 {
+    fill: none;
+    stroke: #6b4fb3;
+    stroke-width: 2.6;
+  }
+
+  .region-label {
+    font-family: var(--serif);
+    font-size: 11px;
+    font-style: italic;
+  }
 
   .line-label {
     font-family: var(--serif);
@@ -388,12 +414,10 @@
     letter-spacing: 0.05em;
   }
 
-  /* Year brush */
-  .year-brush .selection {
-    fill: var(--accent);
-    fill-opacity: 0.1;
-    stroke: var(--accent);
-    stroke-width: 1;
+  /* Invisible line-chart click target */
+  .year-hit-area {
+    fill: transparent;
+    cursor: crosshair;
   }
 
   /* ===== Footer notes ===== */
@@ -521,7 +545,7 @@
         <h2 class="panel-title">
           <span id="line-title">Global mean</span><span id="region-badge" style="display:none;" class="mode-badge">Region selected</span>
         </h2>
-        <button class="clear-brush" id="clear-region" style="display:none;">Clear region</button>
+        <button class="clear-brush" id="clear-region" style="display:none;">Clear regions</button>
       </div>
       <svg id="line-svg" viewBox="0 0 490 420"></svg>
     </div>
@@ -579,7 +603,7 @@ const state = {
   scenario: 'ssp245',
   feature: 'tas',
   decade: 2090,
-  region: null  // {lon0, lat0, lon1, lat1} or null
+  regions: []  // up to two {lon0, lat0, lon1, lat1} selections
 };
 
 // =====================================================================
@@ -618,12 +642,12 @@ const FEATURE_META = {
   tas: {
     title: 'Temperature anomaly map',
     sub: 'Δ°C vs 1850–1900 baseline',
-    notes: `<strong>Temperature anomaly.</strong> Each cell shows how much warmer (red) or cooler (blue) that region is compared to the 1850–1900 pre-industrial baseline. The global average is already ~1.3°C above baseline today. Drag a box on the map to filter the line chart to that region, or click the time axis to jump to a decade.`
+    notes: `<strong>Temperature anomaly.</strong> Each cell shows how much warmer (red) or cooler (blue) that region is compared to the 1850–1900 pre-industrial baseline. The global average is already ~1.3°C above baseline today. Drag up to two boxes on the map to compare those regions against the global average, or click the line chart to jump to a decade.`
   },
   pr: {
     title: 'Precipitation anomaly map',
     sub: 'Δ% vs 1850–1900 baseline',
-    notes: `<strong>Precipitation anomaly.</strong> Blue cells receive more rainfall or snowfall than the pre-industrial baseline; brown cells receive less. A warmer atmosphere holds ~7% more moisture per 1°C, so wet regions tend to get wetter and dry regions drier. Drag a region on the map to see its precipitation trajectory over time.`
+    notes: `<strong>Precipitation anomaly.</strong> Blue cells receive more rainfall or snowfall than the pre-industrial baseline; brown cells receive less. A warmer atmosphere holds ~7% more moisture per 1°C, so wet regions tend to get wetter and dry regions drier. Drag up to two regions on the map to compare their precipitation trajectories against the global average over time.`
   },
   siconc: {
     title: 'Sea ice concentration map',
@@ -655,24 +679,43 @@ const gRegionHL  = mapSvg.append('g').attr('class', 'region-hl-layer');
 
 
 function updateRegionHighlight() {
+  // Keep a very subtle label/outline for selected regions, but remove the active
+  // D3 brush rectangle immediately after each drag.
   gRegionHL.selectAll('*').remove();
-  if (!state.region || state.feature === 'siconc') return;
-  const r = state.region;
-  const corners = [
-    projection([r.lon0, r.lat1]),
-    projection([r.lon1, r.lat1]),
-    projection([r.lon1, r.lat0]),
-    projection([r.lon0, r.lat0]),
-  ];
-  if (corners.some(c => !c)) return;
-  const xs = corners.map(c => c[0]);
-  const ys = corners.map(c => c[1]);
-  const x0 = Math.min(...xs), x1 = Math.max(...xs);
-  const y0 = Math.min(...ys), y1 = Math.max(...ys);
-  gRegionHL.append('rect')
-    .attr('class', 'region-highlight')
-    .attr('x', x0).attr('y', y0)
-    .attr('width', x1 - x0).attr('height', y1 - y0);
+  if (!state.regions.length || state.feature === 'siconc') return;
+
+  state.regions.forEach((r, idx) => {
+    const corners = [
+      projection([r.lon0, r.lat1]),
+      projection([r.lon1, r.lat1]),
+      projection([r.lon1, r.lat0]),
+      projection([r.lon0, r.lat0]),
+    ];
+    if (corners.some(c => !c)) return;
+    const xs = corners.map(c => c[0]);
+    const ys = corners.map(c => c[1]);
+    const x0 = Math.min(...xs), x1 = Math.max(...xs);
+    const y0 = Math.min(...ys), y1 = Math.max(...ys);
+    const regionColor = idx === 0 ? 'var(--accent)' : '#6b4fb3';
+
+    gRegionHL.append('rect')
+      .attr('class', 'region-highlight')
+      .attr('x', x0).attr('y', y0)
+      .attr('width', x1 - x0).attr('height', y1 - y0)
+      .attr('fill', 'none')
+      .attr('stroke', regionColor)
+      .attr('stroke-opacity', 0.55)
+      .attr('stroke-width', 1)
+      .attr('stroke-dasharray', '3,3');
+
+    gRegionHL.append('text')
+      .attr('x', x0 + 6).attr('y', y0 + 16)
+      .attr('font-family', 'var(--mono)')
+      .attr('font-size', 10)
+      .attr('fill', regionColor)
+      .attr('fill-opacity', 0.85)
+      .text(`Region ${idx + 1}`);
+  });
 }
 
 // ── Polar split view (siconc only) ───────────────────────────────────────────
@@ -861,55 +904,148 @@ function drawMap() {
 
 // Tooltip
 const tooltip = d3.select('#tooltip');
+
+function formatLatLon(lat, lon) {
+  const latStr = d3.format('.1f')(Math.abs(lat)) + '°' + (lat >= 0 ? 'N' : 'S');
+  const lonStr = d3.format('.1f')(Math.abs(lon)) + '°' + (lon >= 0 ? 'E' : 'W');
+  return { latStr, lonStr };
+}
+
+function nearestIndex(values, target) {
+  let bestIdx = 0;
+  let bestDist = Infinity;
+  for (let i = 0; i < values.length; i++) {
+    const dist = Math.abs(values[i] - target);
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestIdx = i;
+    }
+  }
+  return bestIdx;
+}
+
+function nearestLonIndex(values, target) {
+  // Handles either -180..180 or 0..360 longitude grids.
+  let bestIdx = 0;
+  let bestDist = Infinity;
+  for (let i = 0; i < values.length; i++) {
+    const raw = Math.abs(values[i] - target);
+    const wrapped = Math.min(raw, 360 - raw);
+    if (wrapped < bestDist) {
+      bestDist = wrapped;
+      bestIdx = i;
+    }
+  }
+  return bestIdx;
+}
+
 function showTooltip(event, d) {
   const s = SCALES[state.feature];
-  const latStr = d3.format('.1f')(Math.abs(d.lat)) + '°' + (d.lat >= 0 ? 'N' : 'S');
-  const lonStr = d3.format('.1f')(Math.abs(d.lon)) + '°' + (d.lon >= 0 ? 'E' : 'W');
+  const { latStr, lonStr } = formatLatLon(d.lat, d.lon);
   tooltip
     .style('opacity', 1)
     .style('left', (event.pageX + 14) + 'px')
     .style('top', (event.pageY + 14) + 'px')
-    .html(`<strong>${latStr}, ${lonStr}</strong><br/>${s.fmt(d.value)} · ${state.decade}s`);
+    .html(`<strong>Latitude:</strong> ${latStr}<br/><strong>Longitude:</strong> ${lonStr}<br/>${s.fmt(d.value)} · ${state.decade}s`);
 }
+
+function showCoordinateTooltip(event) {
+  // The brush overlay sits above the map cells, so cell hover events can be blocked.
+  // This computes the hovered latitude/longitude directly from the mouse position.
+  const [mx, my] = d3.pointer(event, mapSvg.node());
+  const lonLat = projection.invert([mx, my]);
+  if (!lonLat) { hideTooltip(); return; }
+
+  const [lon, lat] = lonLat;
+  const { latStr, lonStr } = formatLatLon(lat, lon);
+
+  const field = getActiveField();
+  let valueLine = '';
+  if (field) {
+    const latIdx = nearestIndex(GRID.lat, lat);
+    const lonIdx = nearestLonIndex(GRID.lon, lon);
+    const value = field?.[latIdx]?.[lonIdx];
+    if (value !== undefined && value !== null && Number.isFinite(value)) {
+      valueLine = `<br/>${SCALES[state.feature].fmt(value)} · ${state.decade}s`;
+    }
+  }
+
+  tooltip
+    .style('opacity', 1)
+    .style('left', (event.pageX + 14) + 'px')
+    .style('top', (event.pageY + 14) + 'px')
+    .html(`<strong>Latitude:</strong> ${latStr}<br/><strong>Longitude:</strong> ${lonStr}${valueLine}`);
+}
+
 function hideTooltip() { tooltip.style('opacity', 0); }
 
 // Region brush
+let clearingBrushSelection = false;
+
 const regionBrush = d3.brush()
   .extent([[0, 0], [MAP_W, MAP_H]])
   .on('end', brushEnded);
 
 gBrush.call(regionBrush);
 
+// Keep hover feedback working even though the brush overlay is above the map cells.
+gBrush
+  .on('mousemove.tooltip', showCoordinateTooltip)
+  .on('mouseleave.tooltip', hideTooltip);
+
+function updateRegionUI() {
+  const n = state.regions.length;
+  d3.select('#region-badge')
+    .style('display', n ? 'inline-block' : 'none')
+    .text(n === 1 ? '1 region selected' : `${n} regions selected`);
+  d3.select('#clear-region').style('display', n ? 'inline-block' : 'none');
+}
+
 function brushEnded(event) {
   if (!event.selection) {
-    state.region = null;
-    d3.select('#region-badge').style('display', 'none');
-    d3.select('#clear-region').style('display', 'none');
-    drawLine();
+    if (!clearingBrushSelection) {
+      state.regions = [];
+      updateRegionUI();
+      updateRegionHighlight();
+      drawLine();
+    }
     return;
   }
+
   const [[x0, y0], [x1, y1]] = event.selection;
-  // Sample corners back to lon/lat
   const p0 = projection.invert([x0, y0]);
   const p1 = projection.invert([x1, y1]);
   if (!p0 || !p1) return;
-  state.region = {
+
+  const newRegion = {
     lon0: Math.min(p0[0], p1[0]),
     lon1: Math.max(p0[0], p1[0]),
     lat0: Math.min(p0[1], p1[1]),
     lat1: Math.max(p0[1], p1[1])
   };
-  d3.select('#region-badge').style('display', 'inline-block');
-  d3.select('#clear-region').style('display', 'inline-block');
+
+  // Keep only the two most recent regions. Drag once for Region 1, drag again for Region 2.
+  state.regions.push(newRegion);
+  if (state.regions.length > 2) state.regions.shift();
+
+  updateRegionUI();
   updateRegionHighlight();
   drawLine();
+
+  // Clear the temporary D3 brush rectangle while keeping the stored region highlight(s).
+  // Use a short timeout so the synthetic brush "end" event from brush.move(null)
+  // cannot accidentally clear the saved regions.
+  clearingBrushSelection = true;
+  gBrush.call(regionBrush.move, null);
+  setTimeout(() => { clearingBrushSelection = false; }, 0);
 }
 
 d3.select('#clear-region').on('click', () => {
-  state.region = null;
-  d3.select('#region-badge').style('display', 'none');
-  d3.select('#clear-region').style('display', 'none');
+  state.regions = [];
+  updateRegionUI();
+  clearingBrushSelection = true;
   gBrush.call(regionBrush.move, null);
+  setTimeout(() => { clearingBrushSelection = false; }, 0);
   updateRegionHighlight();
   drawLine();
 });
@@ -979,7 +1115,7 @@ const gXAxis = gPlot.append('g').attr('class', 'axis axis-x').attr('transform', 
 const gYAxis = gPlot.append('g').attr('class', 'axis axis-y');
 const gLines = gPlot.append('g');
 const gMarker = gPlot.append('g');
-const gYearBrush = gPlot.append('g').attr('class', 'year-brush');
+const gYearHitArea = gPlot.append('g').attr('class', 'year-hit-layer');
 const gLabels = gPlot.append('g');
 
 gPlot.append('line')
@@ -1034,7 +1170,8 @@ function timeseriesForRegion(scen, feature, region) {
 }
 
 function drawLine() {
-  const region = state.region;
+  const regions = state.regions;
+  const hasRegions = regions.length > 0;
 
   // siconc: show placeholder if data not available
   if (state.feature === 'siconc' && !FIELDS.siconc) {
@@ -1058,10 +1195,10 @@ function drawLine() {
 
   // Update y domain and zero-line based on feature
   if (state.feature === 'tas') {
-    yScale.domain(region ? [-5, 12] : [-5, 5]);
+    yScale.domain(hasRegions ? [-5, 12] : [-5, 5]);
     gPlot.select('.zero-line').style('display', null);
   } else if (state.feature === 'siconc') {
-    yScale.domain(region ? [0, 100] : [0, 55]);
+    yScale.domain(hasRegions ? [0, 100] : [0, 55]);
     gPlot.select('.zero-line').style('display', 'none');
   } else {
     yScale.domain([-25, 25]);
@@ -1075,24 +1212,22 @@ function drawLine() {
     .attr('y1', yScale(0))
     .attr('y2', yScale(0));
 
-  // When no region is selected, use the high-resolution annual global means
-  // from the JSON (smoother). When a region IS selected, compute decadal
-  // regional averages from the spatial fields on the fly.
-  let hist, series;
-  if (region) {
-    hist = timeseriesForRegion('historical', state.feature, region);
-    series = {};
-    for (const scen of SCENARIOS) {
-      series[scen] = timeseriesForRegion(scen, state.feature, region);
-    }
-  } else {
-    const gm = GLOBAL_MEAN_BY_FEATURE[state.feature];
-    hist = gm.historical;
-    series = {};
-    for (const scen of SCENARIOS) {
-      series[scen] = gm[scen] || [];
-    }
+  // Always keep global means visible. If regions are selected, overlay up to two
+  // regional trajectories for the currently selected scenario.
+  const gm = GLOBAL_MEAN_BY_FEATURE[state.feature];
+  let hist = gm.historical;
+  let series = {};
+  for (const scen of SCENARIOS) {
+    series[scen] = gm[scen] || [];
   }
+
+  const regionSeries = regions.map((region, idx) => ({
+    idx,
+    data: [
+      ...timeseriesForRegion('historical', state.feature, region),
+      ...timeseriesForRegion(state.scenario, state.feature, region)
+    ]
+  }));
 
   // siconc anomaly shading — blue above historical mean, amber below
   gLines.selectAll('.siconc-area').remove();
@@ -1133,6 +1268,19 @@ function drawLine() {
       .classed('scen-line-dim', scen !== state.scenario);
   }
 
+  // Overlay selected regions against the global average for the active scenario.
+  gLines.selectAll('path.region-line').data(regionSeries, d => d.idx)
+    .join(
+      enter => enter.append('path')
+        .attr('class', d => `region-line region-line-${d.idx}`),
+      update => update,
+      exit => exit.remove()
+    )
+    .attr('d', d => lineGen(d.data));
+
+  // Remove regional overlays when no region is selected.
+  if (!hasRegions) gLines.selectAll('path.region-line').remove();
+
   // Labels at end of each scenario line
   gLabels.selectAll('text').remove();
   const labelData = SCENARIOS
@@ -1155,6 +1303,17 @@ function drawLine() {
       .text(d.scen.toUpperCase());
   });
 
+  regionSeries.forEach(r => {
+    if (!r.data.length) return;
+    const last = r.data[r.data.length - 1];
+    gLabels.append('text')
+      .attr('class', 'region-label')
+      .attr('x', xScale(last.year) + 6)
+      .attr('y', yScale(last.value) + 16 + r.idx * 13)
+      .attr('fill', r.idx === 0 ? 'var(--accent)' : '#6b4fb3')
+      .text(`Region ${r.idx + 1}`);
+  });
+
   // Year marker
   gMarker.selectAll('*').remove();
   const markerX = xScale(state.decade + 5);
@@ -1169,32 +1328,20 @@ function drawLine() {
     .text(`${state.decade}s`);
 }
 
-// Year brush — lets user scrub the decade
-const yearBrush = d3.brushX()
-  .extent([[0, 0], [PLOT_W, PLOT_H]])
-  .on('brush end', yearBrushed);
-
-gYearBrush.call(yearBrush);
-// Hide the default selection visualization, we just use it for scrubbing
-gYearBrush.selectAll('.selection').style('display', 'none');
-gYearBrush.selectAll('.handle').style('display', 'none');
-
-// Click-to-set instead of brush for simpler interaction
-gYearBrush.on('mousedown.click', null);  // Disable default
-gYearBrush.on('click', function(event) {
-  const [mx] = d3.pointer(event);
-  const year = xScale.invert(mx);
-  const decade = Math.floor(year / 10) * 10;
-  setDecade(decade);
-});
-
-function yearBrushed(event) {
-  if (!event.selection) return;
-  const [x0, x1] = event.selection;
-  const midYear = xScale.invert((x0 + x1) / 2);
-  const decade = Math.floor(midYear / 10) * 10;
-  setDecade(decade);
-}
+// Click target — select one point in time on the line chart.
+// This replaces the old brush interaction: no drag-selection state is created.
+gYearHitArea.append('rect')
+  .attr('class', 'year-hit-area')
+  .attr('x', 0)
+  .attr('y', 0)
+  .attr('width', PLOT_W)
+  .attr('height', PLOT_H)
+  .on('click', function(event) {
+    const [mx] = d3.pointer(event, this);
+    const year = xScale.invert(mx);
+    const decade = Math.floor(year / 10) * 10;
+    setDecade(decade);
+  });
 
 function setDecade(decade) {
   decade = Math.max(1850, Math.min(2090, decade));
@@ -1230,10 +1377,11 @@ d3.select('#feature-select').on('change', function() {
   updateChartLabel(state.feature);
   d3.select('#ice-explainer').style('display', state.feature === 'siconc' ? 'block' : 'none');
   if (state.feature === 'siconc') {
-    state.region = null;
-    d3.select('#region-badge').style('display', 'none');
-    d3.select('#clear-region').style('display', 'none');
+    state.regions = [];
+    updateRegionUI();
+    clearingBrushSelection = true;
     gBrush.call(regionBrush.move, null);
+    setTimeout(() => { clearingBrushSelection = false; }, 0);
   }
   updateRegionHighlight();
   drawMap();
