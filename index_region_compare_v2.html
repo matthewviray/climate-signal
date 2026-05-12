@@ -121,6 +121,13 @@
       <span class="control-label">Compared decades</span>
       <div class="year-readout" id="year-readout">2050s vs 2090s</div>
     </div>
+    <div class="control" id="region-filter-control" style="display:none;">
+      <span class="control-label">Region Filter</span>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="region-filter-badge" class="mode-badge"></span>
+        <button class="clear-brush" id="clear-region-ctrl">✕ Clear</button>
+      </div>
+    </div>
   </div>
 
   <div class="panel" id="maps-panel">
@@ -183,6 +190,7 @@ d3.json('cmip6_data.json').then(DATA => {
   const projection = d3.geoNaturalEarth1().fitExtent([[6, 6], [MAP_W - 6, MAP_H - 6]], {type: 'Sphere'});
   const pathGen = d3.geoPath(projection);
   let LAND = null;
+  let CELL_RECTS = null;
 
   const SCALES = {
     tas:    { domain: [-6, 6],    interp: d3.interpolateRdBu,  reverse: true,  label: 'Δ°C',       fmt: d => d3.format('+.1f')(d) + '°C' },
@@ -267,46 +275,49 @@ d3.json('cmip6_data.json').then(DATA => {
     });
   }
 
-  function makeMap(svgSelector, decade) {
-    const svg = d3.select(svgSelector);
+  function initMap(svgSel) {
+    const svg = d3.select(svgSel);
     svg.selectAll('*').remove();
-
     svg.append('path').datum({type:'Sphere'}).attr('class', 'ocean-sphere').attr('d', pathGen);
     svg.append('path').datum(d3.geoGraticule().step([30, 30])()).attr('class', 'graticule').attr('d', pathGen);
     if (LAND) svg.append('path').datum(LAND).attr('class', 'land-fill').attr('d', pathGen);
-
-    const cells = cellsForDecade(decade).map(d => ({...d, decade}));
-    const visibleCells = state.feature === 'siconc' ? cells.filter(d => d.value > 0.5) : cells;
-    svg.append('g').attr('class', 'cells-layer')
-      .selectAll('rect.cell')
-      .data(visibleCells, d => `${d.latIdx}-${d.lonIdx}`)
-      .join('rect')
-      .attr('class', 'cell')
-      .attr('x', d => d.x).attr('y', d => d.y)
-      .attr('width', d => Math.max(0.5, d.w + 0.5))
-      .attr('height', d => Math.max(0.5, d.h + 0.5))
-      .attr('fill', d => colorFor(d.value, state.feature))
-      .on('mouseenter', showTooltip)
-      .on('mousemove', showTooltip)
-      .on('mouseleave', hideTooltip);
-
+    svg.append('g').attr('class', 'cells-layer');
     if (LAND) svg.append('path').datum(LAND).attr('class', 'country-stroke').attr('d', pathGen);
-
-    const hl = svg.append('g').attr('class', 'region-hl-layer');
-    drawRegionHighlights(hl);
-
+    svg.append('g').attr('class', 'region-hl-layer');
     if (state.feature !== 'siconc') {
       const brushG = svg.append('g').attr('class', 'region-brush');
-      const brush = d3.brush()
-        .extent([[0, 0], [MAP_W, MAP_H]])
+      const brush = d3.brush().extent([[0, 0], [MAP_W, MAP_H]])
         .on('end', event => regionBrushEnded(event, brushG, brush));
       brushG.call(brush);
-      brushG.select('.overlay')
-        .attr('width', MAP_W)
-        .attr('height', MAP_H)
-        .style('pointer-events', 'all')
-        .style('cursor', 'crosshair');
+      brushG.select('.overlay').style('pointer-events', 'all').style('cursor', 'crosshair');
     }
+  }
+
+  function updateMapData(svgSel, decade) {
+    const svg = d3.select(svgSel);
+    const field = fieldFor(state.feature, state.scenario, decade);
+    if (!field || !CELL_RECTS) { svg.select('.cells-layer').selectAll('rect.cell').remove(); return; }
+
+    const visible = state.feature === 'siconc'
+      ? CELL_RECTS.filter(r => field[r.latIdx][r.lonIdx] > 0.5)
+      : CELL_RECTS;
+
+    svg.select('.cells-layer').selectAll('rect.cell')
+      .data(visible, d => `${d.latIdx}-${d.lonIdx}`)
+      .join(
+        enter => enter.append('rect').attr('class', 'cell')
+          .attr('x', d => d.x).attr('y', d => d.y)
+          .attr('width', d => Math.max(0.5, d.w + 0.5))
+          .attr('height', d => Math.max(0.5, d.h + 0.5))
+          .on('mouseenter', (e, d) => showTooltip(e, {lat: d.lat, lon: d.lon, value: field[d.latIdx][d.lonIdx], decade}))
+          .on('mousemove',  (e, d) => showTooltip(e, {lat: d.lat, lon: d.lon, value: field[d.latIdx][d.lonIdx], decade}))
+          .on('mouseleave', hideTooltip),
+        update => update,
+        exit => exit.remove()
+      )
+      .attr('fill', d => colorFor(field[d.latIdx][d.lonIdx], state.feature));
+
+    drawRegionHighlights(svg.select('.region-hl-layer'));
   }
 
   function regionBrushEnded(event, brushG, brush) {
@@ -318,9 +329,23 @@ d3.json('cmip6_data.json').then(DATA => {
     const region = { lon0: Math.min(p0[0], p1[0]), lon1: Math.max(p0[0], p1[0]), lat0: Math.min(p0[1], p1[1]), lat1: Math.max(p0[1], p1[1]) };
     state.regions.push(region);
     state.regions = state.regions.slice(-2);
-    d3.select('#region-badge').style('display', 'inline-block');
-    d3.select('#clear-region').style('display', 'inline-block');
+    updateRegionUI();
     brushG.call(brush.move, null);
+    redrawMaps();
+    drawLine();
+  }
+
+  function updateRegionUI() {
+    const n = state.regions.length;
+    d3.select('#region-badge').style('display', n ? 'inline-block' : 'none');
+    d3.select('#clear-region').style('display', n ? 'inline-block' : 'none');
+    d3.select('#region-filter-control').style('display', n ? 'flex' : 'none');
+    d3.select('#region-filter-badge').text(n === 1 ? '1 region' : `${n} regions`);
+  }
+
+  function clearRegions() {
+    state.regions = [];
+    updateRegionUI();
     redrawMaps();
     drawLine();
   }
@@ -331,8 +356,8 @@ d3.json('cmip6_data.json').then(DATA => {
     d3.select('#year-readout').text(`${a}s vs ${b}s`);
     d3.select('#map-left-label').text(`${a}s`);
     d3.select('#map-right-label').text(`${b}s`);
-    makeMap('#map-svg-left', a);
-    makeMap('#map-svg-right', b);
+    updateMapData('#map-svg-left', a);
+    updateMapData('#map-svg-right', b);
   }
 
   function drawLegend() {
@@ -449,25 +474,44 @@ d3.json('cmip6_data.json').then(DATA => {
     });
   }
 
-  const yearBrush = d3.brushX().extent([[0, 0], [PLOT_W, PLOT_H]]).on('end', event => {
-    if (!event.selection) return;
-    const [x0, x1] = event.selection;
-    const d0 = Math.floor(xScale.invert(x0) / 10) * 10;
-    const d1 = Math.floor(xScale.invert(x1) / 10) * 10;
-    const clamp = d => Math.max(1850, Math.min(2090, d));
-    state.compareDecades = [clamp(d0), clamp(d1)].sort((a, b) => a - b);
-    redrawMaps();
-    drawLine();
-  });
+  function updateMarkersOnly() {
+    gMarkers.selectAll('*').remove();
+    state.compareDecades.forEach(dec => {
+      const x = xScale(dec + 5);
+      gMarkers.append('line').attr('class', 'time-marker').attr('x1', x).attr('x2', x).attr('y1', 0).attr('y2', PLOT_H);
+      gMarkers.append('text').attr('x', x + 5).attr('y', 12).attr('font-family', 'var(--mono)').attr('font-size', 10).attr('fill', 'var(--accent)').text(`${dec}s`);
+    });
+  }
+
+  const yearBrush = d3.brushX().extent([[0, 0], [PLOT_W, PLOT_H]])
+    .on('brush', event => {
+      if (!event.selection) return;
+      const [x0, x1] = event.selection;
+      const clamp = d => Math.max(1850, Math.min(2090, d));
+      const d0 = clamp(Math.floor(xScale.invert(x0) / 10) * 10);
+      const d1 = clamp(Math.floor(xScale.invert(x1) / 10) * 10);
+      state.compareDecades = [d0, d1].sort((a, b) => a - b);
+      d3.select('#year-readout').text(`${state.compareDecades[0]}s vs ${state.compareDecades[1]}s`);
+      d3.select('#map-left-label').text(`${state.compareDecades[0]}s`);
+      d3.select('#map-right-label').text(`${state.compareDecades[1]}s`);
+      updateMapData('#map-svg-left', state.compareDecades[0]);
+      updateMapData('#map-svg-right', state.compareDecades[1]);
+      updateMarkersOnly();
+    })
+    .on('end', event => {
+      if (!event.selection) return;
+      const [x0, x1] = event.selection;
+      const clamp = d => Math.max(1850, Math.min(2090, d));
+      const d0 = clamp(Math.floor(xScale.invert(x0) / 10) * 10);
+      const d1 = clamp(Math.floor(xScale.invert(x1) / 10) * 10);
+      state.compareDecades = [d0, d1].sort((a, b) => a - b);
+      redrawMaps();
+      drawLine();
+    });
   gYearBrush.call(yearBrush);
 
-  d3.select('#clear-region').on('click', () => {
-    state.regions = [];
-    d3.select('#region-badge').style('display', 'none');
-    d3.select('#clear-region').style('display', 'none');
-    redrawMaps();
-    drawLine();
-  });
+  d3.select('#clear-region').on('click', clearRegions);
+  d3.select('#clear-region-ctrl').on('click', clearRegions);
 
   d3.selectAll('#scenario-toggle button').on('click', function() {
     state.scenario = this.dataset.scen;
@@ -479,11 +523,8 @@ d3.json('cmip6_data.json').then(DATA => {
 
   d3.select('#feature-select').on('change', function() {
     state.feature = this.value;
-    if (state.feature === 'siconc') {
-      state.regions = [];
-      d3.select('#region-badge').style('display', 'none');
-      d3.select('#clear-region').style('display', 'none');
-    }
+    if (state.feature === 'siconc') state.regions = [];
+    updateRegionUI();
     updateFeatureText();
     redrawMaps();
     drawLegend();
@@ -496,10 +537,19 @@ d3.json('cmip6_data.json').then(DATA => {
     d3.select('#map-subtitle').text(meta.sub);
     d3.select('#notes-body').html(meta.notes);
     d3.select('#ice-explainer').style('display', state.feature === 'siconc' ? 'block' : 'none');
+    initMap('#map-svg-left');
+    initMap('#map-svg-right');
   }
 
   d3.json('https://cdn.jsdelivr.net/npm/world-atlas@2/land-110m.json').then(world => {
     LAND = topojson.feature(world, world.objects.land);
+    CELL_RECTS = [];
+    for (let i = 0; i < N_LAT; i++) {
+      for (let j = 0; j < N_LON; j++) {
+        const r = cellRect(i, j);
+        if (r) CELL_RECTS.push(r);
+      }
+    }
     updateFeatureText();
     redrawMaps();
     drawLegend();

@@ -536,6 +536,14 @@
       <div class="year-readout" id="year-readout">2090s</div>
     </div>
 
+    <div class="control" id="region-control-bar" style="display:none;">
+      <span class="control-label">Region Filter</span>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="region-bar-label" class="mode-badge"></span>
+        <button class="clear-brush" id="clear-region-bar">✕ Clear</button>
+      </div>
+    </div>
+
   </div>
 
   <div class="viz-grid">
@@ -1008,6 +1016,9 @@ function updateRegionUI() {
     .style('display', n ? 'inline-block' : 'none')
     .text(n === 1 ? '1 region selected' : `${n} regions selected`);
   d3.select('#clear-region').style('display', n ? 'inline-block' : 'none');
+  // Controls-bar region filter indicator
+  d3.select('#region-control-bar').style('display', n ? 'flex' : 'none');
+  d3.select('#region-bar-label').text(n === 1 ? '1 region' : `${n} regions`);
 }
 
 function brushEnded(event) {
@@ -1049,7 +1060,7 @@ function brushEnded(event) {
   setTimeout(() => { clearingBrushSelection = false; }, 0);
 }
 
-d3.select('#clear-region').on('click', () => {
+function clearRegions() {
   state.regions = [];
   updateRegionUI();
   clearingBrushSelection = true;
@@ -1057,7 +1068,10 @@ d3.select('#clear-region').on('click', () => {
   setTimeout(() => { clearingBrushSelection = false; }, 0);
   updateRegionHighlight();
   drawLine();
-});
+}
+
+d3.select('#clear-region').on('click', clearRegions);
+d3.select('#clear-region-bar').on('click', clearRegions);
 
 // Map legend
 function drawLegend() {
@@ -1341,18 +1355,28 @@ gLines.append('path')
 
 // Click target — select one point in time on the line chart.
 // This replaces the old brush interaction: no drag-selection state is created.
-gYearHitArea.append('rect')
+const hitRect = gYearHitArea.append('rect')
   .attr('class', 'year-hit-area')
   .attr('x', 0)
   .attr('y', 0)
   .attr('width', PLOT_W)
   .attr('height', PLOT_H)
-  .on('click', function(event) {
-    const [mx] = d3.pointer(event, this);
-    const year = xScale.invert(mx);
-    const decade = Math.floor(year / 10) * 10;
-    setDecade(decade);
-  });
+  .style('cursor', 'col-resize');
+
+hitRect.node().addEventListener('pointerdown', function(event) {
+  event.preventDefault();
+  this.setPointerCapture(event.pointerId);
+  const [mx] = d3.pointer(event, this);
+  const year = xScale.invert(Math.max(0, Math.min(PLOT_W, mx)));
+  setDecade(Math.floor(year / 10) * 10);
+});
+
+hitRect.node().addEventListener('pointermove', function(event) {
+  if (event.buttons === 0) return;
+  const [mx] = d3.pointer(event, this);
+  const year = xScale.invert(Math.max(0, Math.min(PLOT_W, mx)));
+  setDecade(Math.floor(year / 10) * 10);
+});
 
 function setDecade(decade) {
   decade = Math.max(1850, Math.min(2090, decade));
