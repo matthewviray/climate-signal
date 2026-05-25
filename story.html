@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Climate Story</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600;8..60,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="story.css">
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+</head>
+<body>
+
+<!-- CHAPTER NAV -->
+<nav class="chapter-nav" id="chapter-nav">
+  <div class="chapter-nav-inner">
+    <a href="#ch1" class="ch-dot" data-ch="ch1"><span>1</span><em>The Warming</em></a>
+    <a href="#ch2" class="ch-dot" data-ch="ch2"><span>2</span><em>Feedback Loops</em></a>
+    <a href="#ch3" class="ch-dot" data-ch="ch3"><span>3</span><em>Rainfall</em></a>
+    <a href="#ch4" class="ch-dot" data-ch="ch4"><span>4</span><em>The Crush</em></a>
+    <a href="#ch5" class="ch-dot" data-ch="ch5"><span>5</span><em>The Fork</em></a>
+    <a href="#ch6" class="ch-dot" data-ch="ch6"><span>6</span><em>Your World</em></a>
+    <a href="#explorer" class="ch-dot" data-ch="explorer"><span>↓</span><em>Explore</em></a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <svg class="hero-map-bg" id="hero-bg-svg" viewBox="0 0 1200 620" preserveAspectRatio="xMidYMid slice"></svg>
+  <div class="hero-content">
+    <div class="hero-eyebrow">CMIP6 · CanESM5 · SSP5-8.5 · DSC 106</div>
+    <h1>Climate change isn't<br>one thing.<br>It's a <em>chain reaction.</em></h1>
+    <p class="dek">Warming triggers feedback loops, which disrupt rainfall systems, which compounds into crises — falling hardest on the people least responsible. Here is the full cascade.</p>
+    <div class="scroll-cue">
+      <div class="scroll-arrow">↓</div>
+      Scroll to begin
+    </div>
+  </div>
+</section>
+
+<!-- CH 1: THE WARMING -->
+<section class="chapter ch1" id="ch1">
+  <div class="chapter-map">
+    <div class="map-wrap">
+      <div class="map-label">Temperature Anomaly · SSP5-8.5 · CanESM5</div>
+      <div class="decade-badge" id="ch1-decade">2020s</div>
+      <svg id="ch1-svg" class="map-svg" viewBox="0 0 960 500"></svg>
+      <svg class="legend-svg map-legend" id="ch1-legend" viewBox="0 0 600 36"></svg>
+    </div>
+  </div>
+  <div class="chapter-steps">
+    <div class="step active" data-decade="2020">
+      <div class="chapter-num">Chapter 1 — The Warming</div>
+      <h2>The planet is already 1.2°C warmer than pre-industrial times</h2>
+      <p>For over a century, burning fossil fuels has been releasing CO₂ that traps heat in the atmosphere. The signal is now unmistakable in every corner of the globe.</p>
+      <p>The map shows projected temperature change by the 2020s under the high-emissions scenario — the world we're currently on track for.</p>
+    </div>
+    <div class="step" data-decade="2050">
+      <div class="chapter-num">Chapter 1 — The Warming</div>
+      <h2>By mid-century, entire continents warm by 3–4°C</h2>
+      <p>The Arctic warms 2–4× faster than the global average — a phenomenon called polar amplification. Inland regions and the tropics face persistent heat that ecosystems and infrastructure weren't designed for.</p>
+      <div class="callout" style="border-color:var(--ch1)">
+        <strong>+3–4°C</strong>
+        Average land warming by 2050s under high emissions
+      </div>
+    </div>
+    <div class="step" data-decade="2090">
+      <div class="chapter-num">Chapter 1 — The Warming</div>
+      <h2>By 2100, the Arctic is unrecognizable</h2>
+      <p>Under SSP5-8.5, CanESM5 projects 7°C+ global warming by 2100 — one of the highest but physically plausible estimates among CMIP6 models. The Arctic exceeds 12°C above pre-industrial baseline.</p>
+      <p>This isn't a prediction. It's what's at stake if we do nothing.</p>
+    </div>
+  </div>
+</section>
+<hr class="chapter-divider">
+
+<!-- CH 2: THE FEEDBACK LOOPS -->
+<section class="chapter ch2" id="ch2">
+  <div class="chapter-map">
+    <div class="map-wrap">
+      <div class="map-label">Sea Ice Concentration · SSP5-8.5</div>
+      <div class="decade-badge" id="ch2-decade">2020s</div>
+      <svg id="ch2-svg" class="map-svg" viewBox="0 0 960 500"></svg>
+      <svg class="legend-svg map-legend" id="ch2-legend" viewBox="0 0 600 36"></svg>
+    </div>
+  </div>
+  <div class="chapter-steps">
+    <div class="step active" data-decade="2020">
+      <div class="chapter-num">Chapter 2 — The Feedback Loops</div>
+      <h2>Sea ice is disappearing — and that makes everything worse</h2>
+      <p>Arctic sea ice reflects 80% of sunlight back to space. As it melts, dark ocean absorbs that heat instead. This is the albedo feedback loop — warming causes ice loss which causes more warming.</p>
+    </div>
+    <div class="step" data-decade="2060">
+      <div class="chapter-num">Chapter 2 — The Feedback Loops</div>
+      <h2>By 2060, summer sea ice has nearly vanished under high emissions</h2>
+      <p>What took 10,000 years to freeze is melting in decades. The cascade doesn't stop at the poles — disrupted Arctic circulation destabilizes weather patterns across North America, Europe, and Asia.</p>
+      <div class="callout" style="border-color:var(--ch2)">
+        <strong>~0% summer ice</strong>
+        Arctic September sea-ice extent by 2060s under SSP5-8.5
+      </div>
+    </div>
+    <div class="step" data-decade="2090">
+      <div class="chapter-num">Chapter 2 — The Feedback Loops</div>
+      <h2>A self-reinforcing cycle with no natural brake</h2>
+      <p>Ice loss → more absorbed heat → more warming → more ice loss. Each feedback amplifies the next. This is why the climate system responds more than linearly to emissions — and why high-sensitivity models like CanESM5 matter for understanding risk.</p>
+    </div>
+  </div>
+</section>
+<hr class="chapter-divider">
+
+<!-- CH 3: THE RAINFALL COLLAPSE -->
+<section class="chapter ch3" id="ch3">
+  <div class="chapter-map">
+    <div class="map-wrap">
+      <div class="map-label">Precipitation Anomaly · SSP5-8.5</div>
+      <div class="decade-badge" id="ch3-decade">2020s</div>
+      <svg id="ch3-svg" class="map-svg" viewBox="0 0 960 500"></svg>
+      <svg class="legend-svg map-legend" id="ch3-legend" viewBox="0 0 600 36"></svg>
+    </div>
+  </div>
+  <div class="chapter-steps">
+    <div class="step active" data-decade="2020">
+      <div class="chapter-num">Chapter 3 — The Rainfall Collapse</div>
+      <h2>Warming rewrites where rain falls</h2>
+      <p>A warmer atmosphere holds more water vapor — but it doesn't distribute it evenly. As global circulation patterns shift, rainfall concentrates in some regions and abandons others entirely.</p>
+    </div>
+    <div class="step" data-decade="2060">
+      <div class="chapter-num">Chapter 3 — The Rainfall Collapse</div>
+      <h2>"Wet gets wetter, dry gets drier" — but unequally</h2>
+      <p>Blue regions receive more rain than their historical average. Brown regions lose it. The Amazon dries. The Sahel dries. Mediterranean Europe dries. These are agricultural and water-supply crises in the making.</p>
+      <div class="callout" style="border-color:var(--ch3)">
+        <strong>−30% rainfall</strong>
+        Projected loss in parts of Sub-Saharan Africa and the Amazon by 2090s
+      </div>
+    </div>
+    <div class="step" data-decade="2090">
+      <div class="chapter-num">Chapter 3 — The Rainfall Collapse</div>
+      <h2>The regions losing rain are already food-insecure</h2>
+      <p>Drought doesn't just reduce harvests — it depletes groundwater, forces livestock losses, and triggers migration. By end of century under high emissions, these pressures become structural, not seasonal.</p>
+    </div>
+  </div>
+</section>
+<hr class="chapter-divider">
+
+<!-- CH 4: THE CRUSH -->
+<section class="chapter ch4" id="ch4">
+  <div class="chapter-map">
+    <div class="map-wrap">
+      <div class="map-label" id="ch4-map-label">Temperature Anomaly · 2090s · Who Gets Hit Hardest</div>
+      <svg id="ch4-svg" class="map-svg" viewBox="0 0 960 500"></svg>
+      <div class="ch4-annotations">
+        <div class="wb-legend" id="ch4-wb-legend">
+          <div class="wb-legend-item"><span class="wb-swatch" style="background:#f5c842"></span>Approaching unsafe (&gt;2°C anomaly in tropics)</div>
+          <div class="wb-legend-item"><span class="wb-swatch" style="background:#e05c3a"></span>Unsafe for outdoor labor (&gt;4.5°C)</div>
+          <div class="wb-legend-item"><span class="wb-swatch" style="background:#c94f8a"></span>Near survival limit (&gt;7°C)</div>
+        </div>
+        <div class="wb-legend" id="ch4-injustice-legend">
+          <div class="wb-legend-item"><span class="wb-swatch" style="background:#e05c3a"></span>Most impacted nations (tropical &amp; sub-Saharan)</div>
+          <div class="wb-legend-item"><span class="wb-swatch" style="background:#3a85c0"></span>Largest historical CO₂ emitters</div>
+        </div>
+      </div>
+      <svg class="legend-svg map-legend" id="ch4-legend" viewBox="0 0 600 36"></svg>
+    </div>
+  </div>
+  <div class="chapter-steps">
+    <div class="step active">
+      <div class="chapter-num">Chapter 4 — The Crush</div>
+      <h2>Some regions face all three crises at once</h2>
+      <p>Extreme heat, collapsing rainfall, and rising seas don't arrive separately. Sub-Saharan Africa, South Asia, and Southeast Asia face all three simultaneously — a compounding crisis that each individual variable understates.</p>
+    </div>
+    <div class="step" data-mode="wetbulb">
+      <div class="chapter-num">Chapter 4 — The Crush</div>
+      <h2>Wet-bulb temperature: the silent killer</h2>
+      <p>When heat and humidity combine, the body can no longer cool itself by sweating. Above 31°C wet-bulb, outdoor labor becomes unsafe. Above 35°C, even shade and water can't prevent death.</p>
+      <p>Under high emissions, large parts of South Asia, the Persian Gulf, and West Africa cross these thresholds for weeks each year by 2070.</p>
+      <div class="callout" style="border-color:var(--ch4)">
+        <strong>35°C wet-bulb</strong>
+        The physiological survival limit — regardless of shade or hydration
+      </div>
+    </div>
+    <div class="step" data-mode="injustice">
+      <div class="chapter-num">Chapter 4 — The Crush</div>
+      <h2>The regions hit hardest contributed the least</h2>
+      <p>Sub-Saharan Africa accounts for less than 4% of historical cumulative CO₂ emissions. South Asia, roughly 7%. Yet both face the most compounded climate impacts. This is the central injustice of climate change — the burden is inverted from the cause.</p>
+      <div class="callout" style="border-color:var(--ch4)">
+        <strong>4% vs 30%+</strong>
+        Sub-Saharan Africa's share of emissions vs its share of the world's most climate-exposed people
+      </div>
+    </div>
+  </div>
+</section>
+<hr class="chapter-divider">
+
+<!-- CH 5: THE FORK -->
+<section class="chapter ch5" id="ch5">
+  <div class="chapter-steps">
+    <div class="step">
+      <div class="chapter-num">Chapter 5 — The Fork</div>
+      <h2>But this future isn't inevitable</h2>
+      <p>The same model, the same planet — two different choices. The left shows SSP1-2.6: aggressive emissions cuts, renewable transition. The right shows SSP5-8.5: fossil fuel acceleration, no serious action.</p>
+      <p>The gap between these futures by 2090 is not marginal. It is the difference between a difficult but manageable future and civilizational-scale disruption.</p>
+    </div>
+  </div>
+  <div class="fork-maps">
+    <div class="fork-card">
+      <div class="fork-card-title" style="color:var(--scen-126)">SSP1-2.6 · Strong Mitigation · 2090s</div>
+      <svg id="fork-svg-126" class="map-svg" viewBox="0 0 960 500"></svg>
+    </div>
+    <div class="fork-card">
+      <div class="fork-card-title" style="color:var(--scen-585)">SSP5-8.5 · No Mitigation · 2090s</div>
+      <svg id="fork-svg-585" class="map-svg" viewBox="0 0 960 500"></svg>
+    </div>
+  </div>
+  <svg id="fork-legend" viewBox="0 0 960 36" style="width:100%;height:36px;display:block;margin-top:16px;"></svg>
+</section>
+<hr class="chapter-divider">
+
+<!-- CH 6: YOUR WORLD -->
+<section class="chapter ch6" id="ch6">
+  <div class="chapter-steps">
+    <div class="step">
+      <div class="chapter-num">Chapter 6 — Your World</div>
+      <h2>Click your country to see its specific trajectory</h2>
+      <p>Every place on Earth faces a different version of this story. Click any country to see how temperature is projected to change across all three scenarios — and what the difference between acting and not acting means locally.</p>
+    </div>
+  </div>
+  <div class="world-interactive">
+    <div style="position:relative;">
+      <div class="map-label" style="position:absolute;top:8px;left:8px;z-index:1;">Click a country</div>
+      <svg id="ch6-svg" class="map-svg" viewBox="0 0 960 500" style="cursor:pointer;"></svg>
+    </div>
+    <div class="country-info" id="country-info">
+      <div class="country-info-placeholder" id="country-placeholder">← Click a country on the map<br>to see its climate trajectory</div>
+      <div id="country-detail" style="display:none;">
+        <div class="country-name" id="country-name"></div>
+        <div class="country-sub" id="country-sub"></div>
+        <svg id="country-line-svg" viewBox="0 0 400 220"></svg>
+        <div class="country-scen-legend">
+          <span style="color:#888">── Historical</span>
+          <span style="color:var(--scen-126)">── SSP1-2.6</span>
+          <span style="color:var(--scen-245)">── SSP2-4.5</span>
+          <span style="color:var(--scen-585)">── SSP5-8.5</span>
+        </div>
+        <div id="country-climate-summary"></div>
+      </div>
+    </div>
+  </div>
+</section>
+<hr class="chapter-divider">
+
+<!-- EXPLORER -->
+<section class="explorer-section" id="explorer">
+  <div class="explorer-header">
+    <h2>Explore the data yourself</h2>
+    <p>Select a scenario and variable, brush the timeline or hit play to animate through decades, and drag boxes on the maps to compare regions.</p>
+  </div>
+  <div class="controls">
+    <div class="control">
+      <span class="control-label">Scenario</span>
+      <div class="toggle-group" id="scenario-toggle">
+        <button data-scen="ssp126">SSP1-2.6</button>
+        <button data-scen="ssp245" class="active">SSP2-4.5</button>
+        <button data-scen="ssp585">SSP5-8.5</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="control-label">Variable</span>
+      <select id="feature-select">
+        <option value="tas">Temperature anomaly</option>
+        <option value="pr">Precipitation anomaly</option>
+        <option value="siconc">Sea ice concentration</option>
+      </select>
+    </div>
+    <div class="control">
+      <span class="control-label">Decades shown</span>
+      <div class="year-readout" id="year-readout">2050s vs 2090s</div>
+    </div>
+    <div class="control">
+      <span class="control-label">Playback</span>
+      <button class="play-btn" id="play-btn">▶ Play</button>
+    </div>
+    <div class="control" id="region-filter-control" style="display:none;">
+      <span class="control-label">Region</span>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="region-filter-badge" class="mode-badge"></span>
+        <button class="clear-brush" id="clear-region-ctrl">✕ Clear</button>
+      </div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title" id="map-title">Temperature anomaly maps</div>
+      <span class="panel-subtitle" id="map-subtitle">Δ°C vs 1850–1900 baseline</span>
+    </div>
+    <div class="maps-grid">
+      <div class="map-card-e">
+        <div class="map-card-header-e"><span>Earlier decade</span><span id="map-left-label">2050s</span></div>
+        <svg id="map-svg-left" class="map-svg-e" viewBox="0 0 960 500"></svg>
+      </div>
+      <div class="map-card-e">
+        <div class="map-card-header-e"><span>Later decade</span><span id="map-right-label">2090s</span></div>
+        <svg id="map-svg-right" class="map-svg-e" viewBox="0 0 960 500"></svg>
+      </div>
+    </div>
+    <svg id="legend-svg" viewBox="0 0 720 40" style="width:100%;height:40px;display:block;margin-top:12px;"></svg>
+  </div>
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <span id="line-title">Global mean over time</span>
+        <span id="region-badge" style="display:none;" class="mode-badge">Regions selected</span>
+      </div>
+      <button class="clear-brush" id="clear-region" style="display:none;">Clear regions</button>
+    </div>
+    <svg id="line-svg" viewBox="0 0 1400 300" style="width:100%;height:auto;display:block;"></svg>
+  </div>
+  <div class="notes" id="notes-box"><span id="notes-body"></span></div>
+</section>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script src="story.js"></script>
+</body>
+</html>
