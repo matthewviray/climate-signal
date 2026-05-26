@@ -75,6 +75,9 @@ Promise.all([
   initCh6();
   initHeroBg();
   initExplorer();
+  addCountryBoundariesToAllMaps();
+  initClimateInequalityOverlay();
+  initInequalityNarrativeCharts();
   initChapterNav();
   initScrollSpy();
 });
@@ -906,3 +909,494 @@ function initExplorer() {
   drawELine();
   gYBrush.call(yBrush.move, [xSc(2055), xSc(2095)]);
 }
+
+
+// ─────────────────────────────────────────────
+// CLIMATE INEQUALITY OVERLAY
+// Uses existing cmip6_data.json grid format
+// Requires existing variables/functions:
+// DATA, CELL_RECTS, COUNTRIES_GEO, ISO_NAMES,
+// getField, pathGen, initBaseSvg
+// ─────────────────────────────────────────────
+
+const EMISSIONS_RESPONSIBILITY = {
+  840: 1.00, // United States
+  156: 0.78, // China
+  643: 0.42, // Russia
+  276: 0.32, // Germany
+  826: 0.30, // United Kingdom
+  392: 0.25, // Japan
+  124: 0.22, // Canada
+  250: 0.20, // France
+  36: 0.18,  // Australia
+  380: 0.17, // Italy
+  356: 0.16, // India
+  76: 0.10,  // Brazil
+  566: 0.04   // Nigeria
+};
+
+function countryMeanFromField(countryFeature, field) {
+  const [[lon0, lat0], [lon1, lat1]] = d3.geoBounds(countryFeature);
+  const wrapAround = lon1 - lon0 > 340;
+
+  let sum = 0;
+  let weight = 0;
+
+  CELL_RECTS.forEach(r => {
+    const inLat = r.lat >= lat0 && r.lat <= lat1;
+    const inLon = wrapAround || (r.lon >= lon0 && r.lon <= lon1);
+
+    if (!inLat || !inLon) return;
+
+    const v = field[r.i][r.j];
+
+    if (!Number.isFinite(v)) return;
+
+    const w = Math.cos(r.lat * Math.PI / 180);
+
+    sum += v * w;
+    weight += w;
+  });
+
+  return weight > 0 ? sum / weight : null;
+}
+
+function buildCountryInequalityData(scen = "ssp585", decade = 2090) {
+  const tasField = getField("tas", scen, decade);
+  const prField = getField("pr", scen, decade);
+
+  if (!tasField || !prField || !COUNTRIES_GEO || !CELL_RECTS) {
+    return [];
+  }
+
+  const raw = COUNTRIES_GEO.features
+    .map(feature => {
+      const id = parseInt(feature.id);
+      const name = ISO_NAMES[id] || "Country";
+
+      const warming = countryMeanFromField(feature, tasField);
+      const precipitation = countryMeanFromField(feature, prField);
+
+      if (warming === null || precipitation === null) return null;
+
+      return {
+        feature,
+        id,
+        name,
+        warming,
+        precipitation,
+        precipitationStress: Math.abs(precipitation),
+        responsibility: EMISSIONS_RESPONSIBILITY[id] || 0
+      };
+    })
+    .filter(Boolean);
+
+  const warmNorm = d3.scaleLinear()
+    .domain(d3.extent(raw, d => d.warming))
+    .range([0, 1]);
+
+  const precipNorm = d3.scaleLinear()
+    .domain(d3.extent(raw, d => d.precipitationStress))
+    .range([0, 1]);
+
+  raw.forEach(d => {
+    d.compoundRisk =
+      0.65 * warmNorm(d.warming) +
+      0.35 * precipNorm(d.precipitationStress);
+
+    d.inequalityGap =
+      d.compoundRisk - d.responsibility;
+  });
+
+  return raw;
+}
+
+function addCountryBoundaries(svg) {
+  const existing = svg.select(".country-boundary-layer");
+
+  if (!existing.empty()) return;
+
+  svg.append("g")
+    .attr("class", "country-boundary-layer")
+    .selectAll("path.country-boundary")
+    .data(COUNTRIES_GEO.features)
+    .join("path")
+    .attr("class", "country-boundary")
+    .attr("d", pathGen)
+    .attr("fill", "none")
+    .attr("stroke", "rgba(255,255,255,0.42)")
+    .attr("stroke-width", 0.45)
+    .attr("pointer-events", "none");
+}
+
+function addCountryBoundariesToAllMaps() {
+  const selectors = [
+    "#ch1-svg",
+    "#ch2-svg",
+    "#ch3-svg",
+    "#ch4-svg",
+    "#fork-svg-126",
+    "#fork-svg-585",
+    "#map-svg-left",
+    "#map-svg-right"
+  ];
+
+  selectors.forEach(sel => {
+    const svg = d3.select(sel);
+
+    if (!svg.empty() && COUNTRIES_GEO) {
+      addCountryBoundaries(svg);
+    }
+  });
+}
+
+function initClimateInequalityOverlay() {
+  const svg = d3.select("#ch4-svg");
+
+  if (svg.empty()) return;
+
+  svg.select(".countries-impact-layer").remove();
+
+  svg.insert("g", ".country-stroke")
+    .attr("class", "countries-impact-layer")
+    .style("opacity", 0);
+
+  const countryData = buildCountryInequalityData("ssp585", 2090);
+
+  const riskColor = d3.scaleSequential(d3.interpolateYlOrRd)
+    .domain(d3.extent(countryData, d => d.compoundRisk));
+
+  const gapStroke = d3.scaleDiverging(d3.interpolateRdBu)
+    .domain([
+      d3.min(countryData, d => d.inequalityGap),
+      0,
+      d3.max(countryData, d => d.inequalityGap)
+    ]);
+
+  const circleRadius = d3.scaleSqrt()
+    .domain([0, d3.max(countryData, d => d.responsibility)])
+    .range([0, 24]);
+
+  const layer = svg.select(".countries-impact-layer");
+
+  layer.selectAll("path.impact-country")
+    .data(countryData)
+    .join("path")
+    .attr("class", "impact-country")
+    .attr("d", d => pathGen(d.feature))
+    .attr("fill", d => riskColor(d.compoundRisk))
+    .attr("fill-opacity", 0.52)
+    .attr("stroke", d => gapStroke(d.inequalityGap))
+    .attr("stroke-width", 1.1)
+    .attr("pointer-events", "none");
+
+  layer.selectAll("circle.emissions-circle")
+    .data(countryData.filter(d => d.responsibility > 0))
+    .join("circle")
+    .attr("class", "emissions-circle")
+    .attr("cx", d => pathGen.centroid(d.feature)[0])
+    .attr("cy", d => pathGen.centroid(d.feature)[1])
+    .attr("r", d => circleRadius(d.responsibility))
+    .attr("fill", "rgba(20,20,20,0.35)")
+    .attr("stroke", "#111")
+    .attr("stroke-width", 0.8)
+    .attr("pointer-events", "none");
+
+  drawInequalityInteractionChart(countryData);
+}
+
+function showInjustice(visible) {
+  d3.select("#ch4-svg")
+    .select(".countries-impact-layer")
+    .transition()
+    .duration(700)
+    .ease(d3.easeCubicInOut)
+    .style("opacity", visible ? 1 : 0);
+
+  const leg = document.getElementById("ch4-injustice-legend");
+
+  if (leg) {
+    leg.classList.toggle("visible", visible);
+  }
+}
+
+function drawInequalityInteractionChart(countryData) {
+  const container = d3.select("#inequality-interaction-chart");
+
+  if (container.empty()) return;
+
+  const W = 620;
+  const H = 360;
+  const margin = { top: 36, right: 40, bottom: 58, left: 68 };
+  const innerW = W - margin.left - margin.right;
+  const innerH = H - margin.top - margin.bottom;
+
+  container.html("");
+
+  const svg = container
+    .append("svg")
+    .attr("viewBox", [0, 0, W, H]);
+
+  const g = svg
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  const x = d3.scaleLinear()
+    .domain([0, d3.max(countryData, d => d.responsibility)])
+    .nice()
+    .range([0, innerW]);
+
+  const y = d3.scaleLinear()
+    .domain([0, d3.max(countryData, d => d.compoundRisk)])
+    .nice()
+    .range([innerH, 0]);
+
+  const r = d3.scaleSqrt()
+    .domain([0, d3.max(countryData, d => Math.abs(d.inequalityGap))])
+    .range([4, 16]);
+
+  g.append("g")
+    .attr("class", "axis")
+    .attr("transform", `translate(0,${innerH})`)
+    .call(d3.axisBottom(x).ticks(5));
+
+  g.append("g")
+    .attr("class", "axis")
+    .call(d3.axisLeft(y).ticks(5));
+
+  g.append("text")
+    .attr("x", innerW / 2)
+    .attr("y", innerH + 44)
+    .attr("text-anchor", "middle")
+    .attr("class", "chart-label")
+    .text("Historical emissions responsibility");
+
+  g.append("text")
+    .attr("x", -innerH / 2)
+    .attr("y", -48)
+    .attr("text-anchor", "middle")
+    .attr("transform", "rotate(-90)")
+    .attr("class", "chart-label")
+    .text("Projected compound climate impact");
+
+  const maxVal = Math.min(x.domain()[1], y.domain()[1]);
+
+  g.append("line")
+    .attr("x1", x(0))
+    .attr("y1", y(0))
+    .attr("x2", x(maxVal))
+    .attr("y2", y(maxVal))
+    .attr("stroke", "rgba(255,255,255,0.35)")
+    .attr("stroke-dasharray", "5 5");
+
+  const points = g.selectAll("circle.ineq-point")
+    .data(countryData)
+    .join("circle")
+    .attr("class", "ineq-point")
+    .attr("cx", d => x(d.responsibility))
+    .attr("cy", d => y(d.compoundRisk))
+    .attr("r", d => r(Math.abs(d.inequalityGap)))
+    .attr("fill", d => d.inequalityGap > 0 ? "rgba(224,92,58,0.68)" : "rgba(74,158,202,0.68)")
+    .attr("stroke", "#fff")
+    .attr("stroke-width", 0.7)
+    .on("mouseenter", function(event, d) {
+      d3.select(this)
+        .attr("stroke-width", 2)
+        .attr("r", r(Math.abs(d.inequalityGap)) + 3);
+
+      showTip(
+        event,
+        `<strong>${d.name}</strong><br>
+        Warming: +${d.warming.toFixed(1)}°C<br>
+        Rainfall disruption: ${d.precipitation.toFixed(0)}%<br>
+        Compound impact: ${d.compoundRisk.toFixed(2)}<br>
+        Responsibility: ${d.responsibility.toFixed(2)}<br>
+        Gap: ${d.inequalityGap.toFixed(2)}`
+      );
+    })
+    .on("mouseleave", function(event, d) {
+      d3.select(this)
+        .attr("stroke-width", 0.7)
+        .attr("r", r(Math.abs(d.inequalityGap)));
+
+      hideTip();
+    });
+
+  const labels = countryData
+    .filter(d => d.responsibility > 0.15 || d.inequalityGap > 0.55)
+    .sort((a, b) => Math.abs(b.inequalityGap) - Math.abs(a.inequalityGap))
+    .slice(0, 12);
+
+  g.selectAll("text.point-label")
+    .data(labels)
+    .join("text")
+    .attr("class", "point-label")
+    .attr("x", d => x(d.responsibility) + 7)
+    .attr("y", d => y(d.compoundRisk) - 7)
+    .text(d => d.name)
+    .attr("font-size", 9)
+    .attr("fill", "var(--ink-soft)")
+    .attr("pointer-events", "none");
+
+  svg.append("text")
+    .attr("x", margin.left)
+    .attr("y", 18)
+    .attr("class", "chart-title")
+    .text("Responsibility vs. impact");
+
+  svg.append("text")
+    .attr("x", margin.left)
+    .attr("y", 34)
+    .attr("class", "chart-subtitle")
+    .text("Upper-left countries face high projected impact despite lower historical responsibility.");
+}
+
+function drawImpactAccelerationChart() {
+  const container = d3.select("#impact-acceleration-chart");
+
+  if (container.empty()) return;
+
+  const scen = "ssp585";
+  const decades = DATA.meta.decades_fut;
+
+  const W = 620;
+  const H = 330;
+  const margin = { top: 36, right: 36, bottom: 52, left: 64 };
+  const innerW = W - margin.left - margin.right;
+  const innerH = H - margin.top - margin.bottom;
+
+  const highEmitters = new Set(Object.keys(EMISSIONS_RESPONSIBILITY).map(Number));
+
+  function meanForGroup(decade, groupType) {
+    const field = getField("tas", scen, decade);
+
+    if (!field) return null;
+
+    let sum = 0;
+    let n = 0;
+
+    COUNTRIES_GEO.features.forEach(feature => {
+      const id = parseInt(feature.id);
+      const isEmitter = highEmitters.has(id);
+
+      if (groupType === "emitters" && !isEmitter) return;
+      if (groupType === "nonemitters" && isEmitter) return;
+
+      const v = countryMeanFromField(feature, field);
+
+      if (Number.isFinite(v)) {
+        sum += v;
+        n++;
+      }
+    });
+
+    return n > 0 ? sum / n : null;
+  }
+
+  const series = decades.map(decade => ({
+    year: decade + 5,
+    emitters: meanForGroup(decade, "emitters"),
+    nonemitters: meanForGroup(decade, "nonemitters")
+  })).filter(d => d.emitters !== null && d.nonemitters !== null);
+
+  container.html("");
+
+  const svg = container
+    .append("svg")
+    .attr("viewBox", [0, 0, W, H]);
+
+  const g = svg
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  const x = d3.scaleLinear()
+    .domain(d3.extent(series, d => d.year))
+    .range([0, innerW]);
+
+  const y = d3.scaleLinear()
+    .domain([
+      0,
+      d3.max(series, d => Math.max(d.emitters, d.nonemitters))
+    ])
+    .nice()
+    .range([innerH, 0]);
+
+  const lineEmitters = d3.line()
+    .x(d => x(d.year))
+    .y(d => y(d.emitters))
+    .curve(d3.curveMonotoneX);
+
+  const lineNonEmitters = d3.line()
+    .x(d => x(d.year))
+    .y(d => y(d.nonemitters))
+    .curve(d3.curveMonotoneX);
+
+  g.append("g")
+    .attr("class", "axis")
+    .attr("transform", `translate(0,${innerH})`)
+    .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+
+  g.append("g")
+    .attr("class", "axis")
+    .call(d3.axisLeft(y).tickFormat(d => `+${d.toFixed(1)}°`));
+
+  g.append("path")
+    .datum(series)
+    .attr("fill", "none")
+    .attr("stroke", "#4a9eca")
+    .attr("stroke-width", 2.5)
+    .attr("d", lineEmitters);
+
+  g.append("path")
+    .datum(series)
+    .attr("fill", "none")
+    .attr("stroke", "#e05c3a")
+    .attr("stroke-width", 2.5)
+    .attr("stroke-dasharray", "6 4")
+    .attr("d", lineNonEmitters);
+
+  const last = series[series.length - 1];
+
+  g.append("text")
+    .attr("x", x(last.year) + 6)
+    .attr("y", y(last.emitters))
+    .attr("fill", "#4a9eca")
+    .attr("font-size", 10)
+    .attr("font-family", "var(--mono)")
+    .text("major emitters");
+
+  g.append("text")
+    .attr("x", x(last.year) + 6)
+    .attr("y", y(last.nonemitters))
+    .attr("fill", "#e05c3a")
+    .attr("font-size", 10)
+    .attr("font-family", "var(--mono)")
+    .text("lower-responsibility countries");
+
+  svg.append("text")
+    .attr("x", margin.left)
+    .attr("y", 18)
+    .attr("class", "chart-title")
+    .text("Acceleration of projected warming");
+
+  svg.append("text")
+    .attr("x", margin.left)
+    .attr("y", 34)
+    .attr("class", "chart-subtitle")
+    .text("The narrative compares responsibility groups under SSP5-8.5.");
+}
+
+function initInequalityNarrativeCharts() {
+  const countryData = buildCountryInequalityData("ssp585", 2090);
+
+  drawInequalityInteractionChart(countryData);
+  drawImpactAccelerationChart();
+}
+
+window.addEventListener("load", () => {
+  setTimeout(() => {
+    addCountryBoundariesToAllMaps();
+    initClimateInequalityOverlay();
+    initInequalityNarrativeCharts();
+  }, 300);
+});
