@@ -61,7 +61,7 @@
   #legend-svg { width:100%; height:46px; display:block; margin-top:14px; }
   .ocean-sphere { fill:#ccd8e0; stroke:var(--rule-strong); stroke-width:.8; vector-effect:non-scaling-stroke; }
   .land-fill { fill:#e8e4da; stroke:rgba(20,20,20,.45); stroke-width:.5; pointer-events:none; vector-effect:non-scaling-stroke; }
-  .cell { fill-opacity:.94; shape-rendering:crispEdges; }
+  .cells-canvas-img { image-rendering: auto; }
   .country-stroke { fill:none; stroke:rgba(0,0,0,.96); stroke-width:1.35; pointer-events:none; vector-effect:non-scaling-stroke; shape-rendering:geometricPrecision; }
   .graticule { fill:none; stroke:rgba(0,0,0,.08); stroke-width:.45; pointer-events:none; vector-effect:non-scaling-stroke; }
   .region-brush .overlay { pointer-events: all; cursor: crosshair; }
@@ -193,7 +193,6 @@ d3.json('cmip6_data.json').then(DATA => {
   const projection = d3.geoNaturalEarth1().fitExtent([[6, 6], [MAP_W - 6, MAP_H - 6]], {type: 'Sphere'});
   const pathGen = d3.geoPath(projection);
   let LAND = null;
-  let CELL_RECTS = null;
 
   const SCALES = {
     tas:    { domain: [-6, 6],    interp: d3.interpolateRdBu,  reverse: true,  label: 'Δ°C',       fmt: d => d3.format('+.1f')(d) + '°C' },
@@ -228,6 +227,56 @@ d3.json('cmip6_data.json').then(DATA => {
     const p1 = projection([lon + DLON/2, lat - DLAT/2]);
     if (!p0 || !p1) return null;
     return { x: p0[0], y: p0[1], w: p1[0] - p0[0], h: p1[1] - p0[1], lat, lon, latIdx, lonIdx };
+  }
+
+  function screenToCell(svgX, svgY) {
+    const geo = projection.invert([svgX, svgY]);
+    if (!geo || !isFinite(geo[0]) || !isFinite(geo[1])) return null;
+    const [lon, lat] = geo;
+    if (lon < -180 || lon > 180 || lat < -90 || lat > 90) return null;
+    const i = Math.round((lat - GRID.lat[0]) / ((GRID.lat[N_LAT - 1] - GRID.lat[0]) / (N_LAT - 1)));
+    const j = Math.round((lon - GRID.lon[0]) / ((GRID.lon[N_LON - 1] - GRID.lon[0]) / (N_LON - 1)));
+    const ci = Math.max(0, Math.min(N_LAT - 1, i));
+    const cj = Math.max(0, Math.min(N_LON - 1, j));
+    return { latIdx: ci, lonIdx: cj, lat: GRID.lat[ci], lon: GRID.lon[cj] };
+  }
+
+  function renderToCanvas(canvas, field, feature) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, MAP_W, MAP_H);
+    ctx.globalAlpha = 0.94;
+    ctx.lineWidth = 0.6;
+    const isIce = feature === 'siconc';
+    const hw = DLON / 2, hh = DLAT / 2;
+    for (let i = 0; i < N_LAT; i++) {
+      const lat = GRID.lat[i];
+      const lat0 = Math.max(-89.9999, lat - hh);
+      const lat1 = Math.min( 89.9999, lat + hh);
+      for (let j = 0; j < N_LON; j++) {
+        const val = field[i][j];
+        if (isIce && val <= 0.5) continue;
+        const lon = GRID.lon[j];
+        const lon0 = Math.max(-179.9999, lon - hw);
+        const lon1 = Math.min( 179.9999, lon + hw);
+        const tl = projection([lon0, lat1]);
+        const tr = projection([lon1, lat1]);
+        const br = projection([lon1, lat0]);
+        const bl = projection([lon0, lat0]);
+        if (!tl || !tr || !br || !bl) continue;
+        const color = colorFor(val, feature);
+        ctx.fillStyle = color;
+        ctx.strokeStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(tl[0], tl[1]);
+        ctx.lineTo(tr[0], tr[1]);
+        ctx.lineTo(br[0], br[1]);
+        ctx.lineTo(bl[0], bl[1]);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 1;
   }
 
   function cellsForDecade(decade) {
@@ -281,12 +330,30 @@ d3.json('cmip6_data.json').then(DATA => {
   function initMap(svgSel) {
     const svg = d3.select(svgSel);
     svg.selectAll('*').remove();
+
+    const clipId = 'sph-clip-' + svgSel.replace(/[^a-z0-9]/gi, '');
+    svg.append('defs').append('clipPath').attr('id', clipId)
+      .append('path').datum({type:'Sphere'}).attr('d', pathGen);
+
     svg.append('path').datum({type:'Sphere'}).attr('class', 'ocean-sphere').attr('d', pathGen);
     svg.append('path').datum(d3.geoGraticule().step([30, 30])()).attr('class', 'graticule').attr('d', pathGen);
     if (LAND) svg.append('path').datum(LAND).attr('class', 'land-fill').attr('d', pathGen);
-    svg.append('g').attr('class', 'cells-layer');
+
+    svg.append('image').attr('class', 'cells-canvas-img')
+      .attr('x', 0).attr('y', 0).attr('width', MAP_W).attr('height', MAP_H)
+      .attr('preserveAspectRatio', 'none')
+      .attr('clip-path', `url(#${clipId})`);
+
+    const node = svg.node();
+    if (!node._canvas) {
+      node._canvas = document.createElement('canvas');
+      node._canvas.width = MAP_W;
+      node._canvas.height = MAP_H;
+    }
+
     if (LAND) svg.append('path').datum(LAND).attr('class', 'country-stroke').attr('d', pathGen);
     svg.append('g').attr('class', 'region-hl-layer');
+
     if (state.feature !== 'siconc') {
       const brushG = svg.append('g').attr('class', 'region-brush');
       const brush = d3.brush().extent([[0, 0], [MAP_W, MAP_H]])
@@ -294,32 +361,29 @@ d3.json('cmip6_data.json').then(DATA => {
       brushG.call(brush);
       brushG.select('.overlay').style('pointer-events', 'all').style('cursor', 'crosshair');
     }
+
+    svg.on('mousemove.tooltip', function(event) {
+      const [x, y] = d3.pointer(event, svg.node());
+      const cell = screenToCell(x, y);
+      if (!cell || !LAND || !node._decade) { hideTooltip(); return; }
+      const field = fieldFor(state.feature, state.scenario, node._decade);
+      if (!field) { hideTooltip(); return; }
+      showTooltip(event, {lat: cell.lat, lon: cell.lon, value: field[cell.latIdx][cell.lonIdx], decade: node._decade});
+    }).on('mouseleave.tooltip', hideTooltip);
   }
 
   function updateMapData(svgSel, decade) {
     const svg = d3.select(svgSel);
+    const node = svg.node();
+    node._decade = decade;
     const field = fieldFor(state.feature, state.scenario, decade);
-    if (!field || !CELL_RECTS) { svg.select('.cells-layer').selectAll('rect.cell').remove(); return; }
-
-    const visible = state.feature === 'siconc'
-      ? CELL_RECTS.filter(r => field[r.latIdx][r.lonIdx] > 0.5)
-      : CELL_RECTS;
-
-    svg.select('.cells-layer').selectAll('rect.cell')
-      .data(visible, d => `${d.latIdx}-${d.lonIdx}`)
-      .join(
-        enter => enter.append('rect').attr('class', 'cell')
-          .attr('x', d => d.x).attr('y', d => d.y)
-          .attr('width', d => Math.max(0.5, d.w + 0.5))
-          .attr('height', d => Math.max(0.5, d.h + 0.5))
-          .on('mouseenter', (e, d) => showTooltip(e, {lat: d.lat, lon: d.lon, value: field[d.latIdx][d.lonIdx], decade}))
-          .on('mousemove',  (e, d) => showTooltip(e, {lat: d.lat, lon: d.lon, value: field[d.latIdx][d.lonIdx], decade}))
-          .on('mouseleave', hideTooltip),
-        update => update,
-        exit => exit.remove()
-      )
-      .attr('fill', d => colorFor(field[d.latIdx][d.lonIdx], state.feature));
-
+    if (!field) {
+      svg.select('.cells-canvas-img').attr('href', null);
+      drawRegionHighlights(svg.select('.region-hl-layer'));
+      return;
+    }
+    renderToCanvas(node._canvas, field, state.feature);
+    svg.select('.cells-canvas-img').attr('href', node._canvas.toDataURL());
     drawRegionHighlights(svg.select('.region-hl-layer'));
   }
 
@@ -570,13 +634,6 @@ d3.json('cmip6_data.json').then(DATA => {
 
   d3.json('https://cdn.jsdelivr.net/npm/world-atlas@2/land-110m.json').then(world => {
     LAND = topojson.feature(world, world.objects.land);
-    CELL_RECTS = [];
-    for (let i = 0; i < N_LAT; i++) {
-      for (let j = 0; j < N_LON; j++) {
-        const r = cellRect(i, j);
-        if (r) CELL_RECTS.push(r);
-      }
-    }
     renderScenExplainer(state.scenario);
     renderFeatureExplainer(state.feature);
     updateFeatureText();
