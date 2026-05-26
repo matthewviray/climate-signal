@@ -83,6 +83,7 @@
   .mode-badge { display:inline-block; font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; background:var(--accent-soft); color:var(--accent); padding:3px 8px; border:1px solid rgba(143,29,20,.35); margin-left:10px; vertical-align:2px; }
   .clear-brush { appearance:none; background:transparent; border:1px solid var(--rule-strong); padding:4px 10px; font-family:var(--mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); cursor:pointer; margin-left:8px; }
   .clear-brush:hover { background:var(--accent-soft); color:var(--accent); }
+  .scenario-explainer { font-family:var(--mono); font-size:10px; color:var(--ink-faint); line-height:1.55; max-width:400px; margin-top:7px; letter-spacing:.01em; }
   .notes, .ice-explainer { margin-top:8px; padding:18px 24px; background:var(--bg-panel); border:1px solid var(--rule); font-size:13px; color:var(--ink-soft); line-height:1.6; }
   .notes strong, .ice-explainer strong { color:var(--ink); font-weight:600; }
   .ice-explainer { border-left:3px solid #185FA5; display:none; }
@@ -95,7 +96,7 @@
 <body>
 <div class="container">
   <header>
-    <div class="eyebrow">DSC 106 · Project 3 · CMIP6 Climate Model Explorer</div>
+    <div class="eyebrow">DSC 106 · Climate-Signal · CMIP6 Climate Model Explorer</div>
     <h1>Where does climate change <em>hit hardest?</em></h1>
     <p class="dek">Compare how the same emissions scenario changes different places over time. Brush the line chart to choose two decades, then compare the two maps side-by-side. Drag boxes on either map to compare up to two selected regions against the global mean.</p>
   </header>
@@ -104,10 +105,11 @@
     <div class="control">
       <span class="control-label">Scenario</span>
       <div class="toggle-group" id="scenario-toggle">
-        <button data-scen="ssp126">SSP1-2.6 · Mitigation</button>
-        <button data-scen="ssp245" class="active">SSP2-4.5 · Middle</button>
-        <button data-scen="ssp585">SSP5-8.5 · High emissions</button>
+        <button data-scen="ssp126">Best case (SSP1-2.6)</button>
+        <button data-scen="ssp245" class="active">Middle road (SSP2-4.5)</button>
+        <button data-scen="ssp585">Worst case (SSP5-8.5)</button>
       </div>
+      <div class="scenario-explainer" id="scenario-explainer"></div>
     </div>
     <div class="control">
       <span class="control-label">Feature</span>
@@ -116,6 +118,7 @@
         <option value="pr">Precipitation anomaly</option>
         <option value="siconc">Sea ice concentration</option>
       </select>
+      <div class="scenario-explainer" id="feature-explainer"></div>
     </div>
     <div class="control">
       <span class="control-label">Compared decades</span>
@@ -207,7 +210,7 @@ d3.json('cmip6_data.json').then(DATA => {
   function colorFor(value, feature) {
     const s = SCALES[feature];
     const t = (value - s.domain[0]) / (s.domain[1] - s.domain[0]);
-    const clamped = 0.05 + Math.max(0, Math.min(1, t)) * 0.90;
+    const clamped = Math.max(0, Math.min(1, t));
     return s.interp(s.reverse ? 1 - clamped : clamped);
   }
 
@@ -513,10 +516,33 @@ d3.json('cmip6_data.json').then(DATA => {
   d3.select('#clear-region').on('click', clearRegions);
   d3.select('#clear-region-ctrl').on('click', clearRegions);
 
+  const SCEN_INFO = {
+    ssp126: { warming: '~1.8°C warmer by 2100', detail: 'The world acts quickly. Countries cut emissions sharply this decade, switch to clean energy, and reach net-zero around 2050. Warming stays close to the Paris Agreement target of 1.5–2°C.' },
+    ssp245: { warming: '~2.7°C warmer by 2100', detail: 'A middle path. Some climate policies take effect and renewables grow, but fossil fuels are phased out slowly. Warming exceeds 2°C, bringing significant but manageable impacts to most regions.' },
+    ssp585: { warming: '~4.4°C warmer by 2100', detail: 'No meaningful action is taken. Fossil fuel use expands, emissions roughly double by 2100, and the planet warms dramatically. Extreme heat, flooding, and ecosystem collapse become widespread.' },
+  };
+  const SCEN_COLOR = { ssp126: 'var(--scen-126)', ssp245: 'var(--scen-245)', ssp585: 'var(--scen-585)' };
+  function renderScenExplainer(scen) {
+    const s = SCEN_INFO[scen];
+    d3.select('#scenario-explainer').html(
+      `<span style="color:${SCEN_COLOR[scen]};font-weight:500;">${s.warming}</span> — ${s.detail}`
+    );
+  }
+
+  const FEATURE_INFO = {
+    tas:    'How much warmer or cooler a region is compared to pre-industrial levels (1850–1900). Red = warming above baseline, blue = below. Most land regions are warming faster than the global average.',
+    pr:     'How much wetter or drier a region is compared to pre-industrial levels. Blue = more rainfall/snowfall, brown = drier conditions. Wet regions tend to get wetter; dry regions tend to get drier.',
+    siconc: 'The percentage of ocean surface covered by sea ice. Tracks the shrinking of Arctic and Antarctic ice — a key indicator of polar warming and a feedback that accelerates further global warming.',
+  };
+  function renderFeatureExplainer(feature) {
+    d3.select('#feature-explainer').text(FEATURE_INFO[feature] || '');
+  }
+
   d3.selectAll('#scenario-toggle button').on('click', function() {
     state.scenario = this.dataset.scen;
     d3.selectAll('#scenario-toggle button').classed('active', false);
     d3.select(this).classed('active', true);
+    renderScenExplainer(state.scenario);
     redrawMaps();
     drawLine();
   });
@@ -526,6 +552,7 @@ d3.json('cmip6_data.json').then(DATA => {
     if (state.feature === 'siconc') state.regions = [];
     updateRegionUI();
     updateFeatureText();
+    renderFeatureExplainer(state.feature);
     redrawMaps();
     drawLegend();
     drawLine();
@@ -550,6 +577,8 @@ d3.json('cmip6_data.json').then(DATA => {
         if (r) CELL_RECTS.push(r);
       }
     }
+    renderScenExplainer(state.scenario);
+    renderFeatureExplainer(state.feature);
     updateFeatureText();
     redrawMaps();
     drawLegend();
@@ -568,31 +597,17 @@ d3.json('cmip6_data.json').then(DATA => {
 <section style="max-width:860px; margin:64px auto 80px; padding:0 28px; font-family:var(--serif); color:var(--ink); line-height:1.65;">
   <hr style="border:none; border-top:1px solid var(--rule); margin-bottom:48px;">
 
-  <h2 style="font-family:var(--display); font-weight:400; font-size:28px; letter-spacing:-.01em; margin:0 0 20px;">Design Rationale</h2>
+  <h2 style="font-family:var(--display); font-weight:400; font-size:28px; letter-spacing:-.01em; margin:0 0 20px;">What have we Done so far</h2>
 
-  <p style="font-size:16px; color:var(--ink-soft); margin:0 0 16px;">Our visualization was designed around the idea that climate change is inherently both spatial and temporal. A single static plot can communicate overall trends, but it becomes difficult to compare how climate impacts vary across regions, scenarios, and decades simultaneously. We therefore designed an interactive plot that allows users to explore both geographic and temporal patterns together.</p>
+  <p style="font-size:16px; color:var(--ink-soft); margin:0 0 16px;">Currently we've decided the focus of our narrative and how it will flow to mainly stress and explain the inequalities climate change has on the different parts of the regions and what can be done in the future. Especially brainstorming how to do the last part of our narrative where it will ask them to choose their country or any other country to show how their country will be impacted in the future with the different emission scenarios. We have also created the choropleth map and implemented how our features will be displayed within our prototype which includes three of our variables we will use for our final version of this project that shows the effect of climate change and global warming in different ways than just temperature rising. The variable's temperature anomaly, precipitation anomaly, and sea ice concentration help show how different regions in the world are impacted by global warming and climate change.</p>
 
-  <p style="font-size:16px; color:var(--ink-soft); margin:0 0 16px;">The primary visual encoding uses choropleth-style gridded world maps to display projected climate anomalies. Color was chosen as the main encoding because anomaly magnitude is continuous and spatially distributed. Diverging color scales were used for temperature and precipitation because these metrics contain meaningful positive and negative deviations. We selected darker, higher-contrast colors to improve readability and make region selections visually distinct from the background climate field.</p>
+  <p style="font-size:16px; color:var(--ink-soft); margin:0 0 16px;">We also have decided to add a filter of the different emission scenarios and a decade slider to compare different decades and understand how different emission scenarios impact the future. Lastly, we have a line plot to represent the change and trend of our different variables and emission scenarios over time. As we want to emphasize the drastic effect of climate change and it's warming on the many climate variables and the world.</p>
 
-  <p style="font-size:16px; color:var(--ink-soft); margin:0 0 16px;">The visualization uses coordinated multiple views. The line chart below the maps shows temporal trends for the currently selected scenario, while the maps show spatial distributions for selected decades. We initially considered using a single map with a draggable year slider, but we found that this made temporal comparison difficult because users had to mentally remember the appearance of previous years. The singular map resulted in one region being selected to be compared to the global mean, but we felt that the main goal of the plot should be to be able to visualize and quantitatively compare between regions, and not just the global mean that could be influenced by different outliers. To address this, we redesigned the interface so brushing a range on the line chart generates two synchronized maps side-by-side. This allows direct visual comparison between earlier and later decades without brushing back and forth between time ranges.</p>
+  <h2 style="font-family:var(--display); font-weight:400; font-size:28px; letter-spacing:-.01em; margin:48px 0 20px;">The most Challenging part of our project</h2>
 
-  <p style="font-size:16px; color:var(--ink-soft); margin:0 0 16px;">We also implemented selective interaction techniques. Users can select arbitrary geographic regions directly on the maps, and the line chart updates to show the selected region alongside the global mean. This interaction was chosen because it allows users to compare local climate trajectories against each other and also with worldwide averages. We considered predefined regional dropdowns, but free-form geographic brushing provided greater flexibility and encouraged exploratory analysis.</p>
+  <p style="font-size:16px; color:var(--ink-soft); margin:0 0 16px;">Overall we think that making the narrative through scrollytelling will be the challenging part of the project. Specifically on deciding on what to display with the narrative text on the side for the different chapters. As we want to ensure the scrollytelling explains effectively and emphasizes climate change, chain of compounding effects and its inequalities towards different parts of the world.</p>
 
-  <p style="font-size:16px; color:var(--ink-soft); margin:0 0 16px;">Another major design decision involved simplifying scenario comparison. Earlier versions displayed average values for all scenario trajectories simultaneously, but this introduced visual clutter and reduced readability once multiple regional comparisons were added. The final design instead focuses on one selected scenario at a time while preserving multi-region comparison within that scenario.</p>
-
-  <p style="font-size:16px; color:var(--ink-soft); margin:0 0 16px;">Finally, we included hover tooltips showing latitude, longitude, anomaly value, and decade to provide local detail without overwhelming the static view with labels.</p>
-
-  <p style="font-size:16px; color:var(--ink-soft); margin:0 0 16px;">The color palette was also a deliberate choice, as we used a diverging red-blue scale for temperature and a brown-blue scale for precipitation. Both variables, respectively, have a meaningful center at zero, where positive and negative shifts imply opposing real-world implications. For sea ice, we used a sequential blue scale since concentration meaningfully varies in one direction, and scenario colors for the three predictive trends (SSP1-2.6, SSP2-4.5, SSP5-8.5) were carried across both feature changes and the line chart to reduce cognitive load when switching between features.</p>
-
-  <h2 style="font-family:var(--display); font-weight:400; font-size:28px; letter-spacing:-.01em; margin:48px 0 20px;">Development Process</h2>
-
-  <p style="font-size:16px; color:var(--ink-soft); margin:0 0 16px;">Our team was involved in multiple development processes, such as data processing, visualization implementation, and drafting/writeup. Raymond Wu and Matthew Viray handled exploratory data analysis, drafting of dynamic and interactive visualizations, while Taejun Park and Kyle Dang handled visualization modifications + rationale, and the development process write-up, respectively. Overall, we spent approximately 16.5 hours building the project, with data preprocessing and JSON export taking roughly 7 hours; map implementation taking 2 hours; line chart and coordinated view logic taking 1.5 hours; region selection and tooltip interactions taking 2 hours; styling and deployment taking 1 hour; and write-up taking approximately 3 hours.</p>
-
-  <p style="font-size:16px; color:var(--ink-soft); margin:0 0 16px;">The most time-consuming aspect came from implementing the brushing interaction between the line chart and the dual maps simultaneously, as syncing the brush range on the time axis with the correct decade-averaged data on both maps required careful state management, with any update to the brush requiring continuous re-aggregation of the CMIP6 grid data and re-rendering both choropleth views without introducing lag or visual discrepancies. This was further complicated by the need to snap brush selections to the nearest valid decade boundary, which required rounding the selected year down to the nearest decade before updating the state and triggering a re-render.</p>
-
-  <p style="font-size:16px; color:var(--ink-soft); margin:0 0 16px;">Another challenge that came up during development was the geographic region selection on the map. Our decision to allow free-form spatial brushing over a gridded climate map, rather than predefined country outlines, required us to implement tracking mouse drag events over the SVG and filtering grid points by their latitude and longitude coordinates. This process involved inverting the Natural Earth projection at the brush endpoints to recover geographic coordinates, then filtering the CMIP6 data grid to only cells whose latitude and longitude fell within the selected bounding box. In doing so, the line chart can update responsively to reflect each (up to two) independent region selections across either map, while making the line chart's responsive updates one of the more intricate parts of the overall frontend implementation.</p>
-
-  <p style="font-size:16px; color:var(--ink-soft); margin:0 0 16px;">Before any of this could be rendered, all variables required preprocessing, with temperature and precipitation expressed as anomalies relative to a 1850-1900 baseline, precipitation being converted from kg per square meter per second to a percent anomaly, and data being aggregated into decadal averages and downsampled to a 48x72 grid, allowing us to keep file sizes manageable for the browser. An additional challenge arose from handling the sea ice concentration variable, which required a completely different rendering approach from temperature and precipitation. Since the siconc data is stored on CanESM5's curvilinear ocean grid rather than a regular latitude and longitude grid, we implemented a KD-tree nearest-neighbor lookup to re-grid the data onto our 48x72 rectilinear grid before exporting. On the frontend, ice cells with concentration below 0.5% are filtered out entirely in order to avoid rendering noise over land and ocean mapping, requiring its own conditional data join separate from the temperature and precipitation rendering paths. Region brushing is also disabled for sea ice, since the curvilinear source grid makes geographic bounding-box selection unreliable.</p>
+  <p style="font-size:16px; color:var(--ink-soft); margin:0 0 16px;">Another challenging decision is figuring out what filters and features to apply towards our exploratory section in our web page. We don't want to add unnecessary filters or features that don't add much or correlate with our main topic.</p>
 </section>
 
 </body>
