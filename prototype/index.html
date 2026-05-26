@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Climate Story — Initial Prototype</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Climate Story</h1>
+      <p class="subtitle">An interactive narrative of cascading climate impacts and the futures still within our control.</p>
+    </header>
+
+    <section class="writeup">
+      <h2>About this prototype</h2>
+
+      <h3>What we've done so far</h3>
+      <p>
+        We've finalized the narrative arc of the project as a six-chapter scrollytelling experience that walks
+        readers through the cascade of climate impacts under different emissions scenarios. We pivoted the
+        data source from the Pangeo CMIP6 cloud catalog to NASA's NEX-GDDP-CMIP6 archive (downscaled, bias-corrected
+        CMIP6 projections at 0.25° resolution) accessed via direct HTTPS from AWS S3, which removed an authentication
+        blocker. We built a Python pipeline that downloads NEX-GDDP yearly NetCDF files, computes end-of-century
+        temperature anomalies relative to a 2015–2016 baseline, coarsens the grid from 0.25° to ~1.5° for browser
+        delivery, and exports JSON tiles per (scenario × decade) combination. This prototype renders the Chapter 1
+        warming choropleth in D3 with two synchronized interactions: a decade slider (2030s → 2060s → 2090s) and a
+        scenario toggle (SSP2-4.5 moderate mitigation vs SSP5-8.5 no mitigation). The map uses a symmetric diverging
+        red-blue color scale clipped at ±10°C so Arctic amplification doesn't blow out the rest of the map.
+      </p>
+
+      <h3>The most challenging part to design</h3>
+      <p>
+        The hardest design challenge is going to be Chapter 6, where readers click their own country and the
+        narrative recomposes itself with that country's specific cascade of impacts. Doing this well requires
+        joining the gridded CMIP6 data to a country-polygon dataset (a non-trivial spatial aggregation problem,
+        since population-weighted means produce different numbers than area-weighted means), then designing a
+        country-specific cascade timeline that highlights the most relevant impacts for that location without
+        becoming a generic dashboard. A second hard problem is the "Divergence Moment" — the year SSP2 and SSP5
+        meaningfully diverge for the selected country — which involves smoothing noisy annual time series with
+        enough rigor that the year we display feels trustworthy rather than arbitrary. Finally, all of this has
+        to load fast enough on a typical laptop that the scrollytelling momentum isn't broken; with 200+ countries
+        and ~10 decades and 2 scenarios, naively pre-baking every combination would blow the browser's network
+        budget, so we'll need an on-the-fly aggregation strategy that's cheap to compute client-side.
+      </p>
+    </section>
+
+    <section class="viz">
+      <h2>Chapter 1 — The Warming</h2>
+      <p class="caption">Projected end-of-century temperature anomaly (°C), relative to a 2015–2016 baseline. ACCESS-CM2 model.</p>
+
+      <div class="controls">
+        <div class="control-group">
+          <label>Scenario</label>
+          <div class="button-group" id="scenario-buttons">
+            <button class="active" data-scenario="ssp245">SSP2-4.5 (moderate mitigation)</button>
+            <button data-scenario="ssp585">SSP5-8.5 (no mitigation)</button>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label for="decade-slider">Decade: <span id="decade-label">2090s</span></label>
+          <input type="range" id="decade-slider" min="0" max="2" value="2" step="1">
+          <div class="slider-ticks">
+            <span>2030s</span>
+            <span>2060s</span>
+            <span>2090s</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="map-container">
+        <svg id="map"></svg>
+        <div id="legend"></div>
+      </div>
+
+      <p class="note">
+        <strong>Prototype data:</strong> single model (ACCESS-CM2), two-year decade averages instead of the
+        20-year windows used in production climate analysis. Final version will use multi-model ensembles and
+        full decadal means.
+      </p>
+    </section>
+
+    <footer>
+      <p>Data: NASA NEX-GDDP-CMIP6 (Thrasher et al. 2022). Coastlines: Natural Earth via world-atlas.</p>
+    </footer>
+  </main>
+
+  <script src="vendor/d3.min.js"></script>
+  <script src="vendor/d3-geo-projection.min.js"></script>
+  <script src="vendor/topojson-client.min.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
