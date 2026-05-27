@@ -172,7 +172,7 @@
 const SCENARIOS = ['ssp126', 'ssp245', 'ssp585'];
 const REGION_COLORS = ['#8f1d14', '#123f73'];
 
-d3.json('cmip6_data.json').then(DATA => {
+d3.json('data/cmip6_data.json').then(DATA => {
   const GRID = { lat: DATA.meta.lat, lon: DATA.meta.lon };
   const N_LON = GRID.lon.length;
   const N_LAT = GRID.lat.length;
@@ -643,11 +643,11 @@ d3.json('cmip6_data.json').then(DATA => {
     gYearBrush.call(yearBrush.move, [xScale(state.compareDecades[0] + 5), xScale(state.compareDecades[1] + 5)]);
   });
 }).catch(err => {
-  console.error('Failed to load cmip6_data.json:', err);
+  console.error('Failed to load data/cmip6_data.json:', err);
   d3.select('body').insert('div', ':first-child')
     .style('background', '#fee').style('border', '1px solid #c33').style('color', '#933')
     .style('padding', '16px 24px').style('font-family', 'monospace').style('font-size', '13px')
-    .html(`<strong>Could not load cmip6_data.json.</strong><br/>Make sure the file is in the same folder as index.html, and that you're serving via a local web server. Error: ${err.message}`);
+    .html(`<strong>Could not load data/cmip6_data.json.</strong><br/>Make sure the file is in the same folder as index.html, and that you're serving via a local web server. Error: ${err.message}`);
 });
 </script>
 

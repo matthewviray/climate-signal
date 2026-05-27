@@ -1,7 +1,7 @@
 """
 Fetch siconc (sea ice concentration) from CMIP6 Google Cloud Storage
 using the catalog CSV (same approach as the notebook), process into
-decadal fields + annual Arctic mean, and add to cmip6_data.json.
+decadal fields + annual Arctic mean, and add to data/cmip6_data.json.
 
 Run from the project directory:  python fetch_siconc.py
 """
@@ -42,7 +42,7 @@ def open_cmip6(variable, experiment, table='SImon'):
     return ds
 
 # ── Load target grid from existing JSON ─────────────────────────────────────
-with open('cmip6_data.json') as f:
+with open('data/cmip6_data.json') as f:
     DATA = json.load(f)
 
 TARGET_LAT = np.array(DATA['meta']['lat'])   # 48 values, S→N
@@ -182,9 +182,9 @@ DATA['global_mean']['siconc'] = {
 }
 DATA['meta']['units']['siconc'] = 'percent_ice_cover'
 
-print('\nWriting cmip6_data.json...')
-with open('cmip6_data.json', 'w') as f:
+print('\nWriting data/cmip6_data.json...')
+with open('data/cmip6_data.json', 'w') as f:
     json.dump(DATA, f, separators=(',', ':'))
 
-size_mb = __import__('os').path.getsize('cmip6_data.json') / 1e6
-print(f'Done! cmip6_data.json updated ({size_mb:.1f} MB)')
+size_mb = __import__('os').path.getsize('data/cmip6_data.json') / 1e6
+print(f'Done! data/cmip6_data.json updated ({size_mb:.1f} MB)')
