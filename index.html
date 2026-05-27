@@ -3,75 +3,293 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <title>Climate Inequality</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap"
-    rel="stylesheet"
-  >
+  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="story.css">
-
-  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 </head>
-
 <body>
   <main class="container">
 
+    <!-- INTRO / INFOGRAPHIC: not numbered as a chapter -->
     <section id="intro-stats" class="intro-panel">
       <div class="intro-text">
         <div class="eyebrow">Climate inequality · Global baseline</div>
-
-        <h1>
-          Climate change is global,
-          but its causes and consequences are uneven.
-        </h1>
-
+        <h1>Climate change is global, but its causes and consequences are uneven.</h1>
         <p class="dek">
           Human emissions have reshaped the climate system. Rising temperatures,
           shifting precipitation patterns, and declining sea ice reveal a planet
           changing unevenly across space.
         </p>
       </div>
-
       <div id="stats-grid" class="stats-grid"></div>
     </section>
 
+    <!-- CHAPTER 1: SEA ICE -->
+    <section id="ch2" class="chapter ch2">
+      <div class="chapter-text">
+        <div class="step active" data-decade="2020">
+          <div class="chapter-num">Chapter 1 · Sea Ice</div>
+          <h2>Polar regions are changing fastest.</h2>
+          <p>
+            Warming is not evenly distributed across the planet. Sea ice decline is one
+            of the clearest visible indicators of accelerating climate change.
+          </p>
+        </div>
+        <div class="step" data-decade="2050">
+          <h2>Mid-century ice decline accelerates.</h2>
+          <p>
+            By the 2050s, seasonal sea ice loss intensifies under continued emissions growth.
+          </p>
+        </div>
+        <div class="step" data-decade="2090">
+          <h2>High-emissions futures reshape the Arctic.</h2>
+          <p>
+            By the end of the century, high-emissions futures show dramatic reductions
+            in sea ice coverage.
+          </p>
+        </div>
+      </div>
+      <div class="sticky-graphic">
+        <div class="map-label">Sea Ice Concentration · <span id="ch2-decade">2020s</span></div>
+        <svg id="ch2-svg" viewBox="0 0 960 500"></svg>
+        <svg id="ch2-legend" width="360" height="42"></svg>
+      </div>
+    </section>
 
-    <section class="story-step" data-step="emissions">
-  <h2>Who has contributed most to emissions?</h2>
-  <p>
-    Climate responsibility changes depending on whether we look at the past or the present.
-    Historical emissions show long-term responsibility, while recent emissions show who is
-    contributing most today.
-  </p>
-</section>
+    <!-- CHAPTER 2: EMISSIONS -->
+    <section id="emissions-chapter" class="standard-chapter emissions-chapter">
+      <div class="chapter-heading">
+        <div class="chapter-num">Chapter 2 · Emissions</div>
+        <h2>Who has contributed most to emissions?</h2>
+        <p>
+          Climate responsibility changes depending on whether we look at the past or the present.
+          Historical emissions show long-term responsibility, while recent emissions show who is
+          contributing most today.
+        </p>
+      </div>
 
-<section id="emissions-comparison-section">
-  <h2>Past vs Present Emissions Contributions</h2>
+      <section id="emissions-comparison-section">
+        <h3>Past vs Present Emissions Contributions</h3>
+        <div id="emissions-map"></div>
+        <div class="emissions-grid">
+          <div>
+            <h4>Historical Top 10 Emitters</h4>
+            <div id="historical-emissions-chart"></div>
+          </div>
+          <div>
+            <h4>Present-Day Top 10 Emitters</h4>
+            <div id="present-emissions-chart"></div>
+          </div>
+        </div>
+      </section>
+    </section>
 
-  <div id="emissions-map"></div>
+    <!-- CHAPTER 3: PRECIPITATION -->
+    <section id="ch3" class="chapter ch3">
+      <div class="chapter-text">
+        <div class="step active" data-decade="2020">
+          <div class="chapter-num">Chapter 3 · Precipitation</div>
+          <h2>Rainfall patterns become less stable.</h2>
+          <p>
+            Climate impacts are not limited to warming alone. Some regions experience
+            intensifying drought, while others face more extreme precipitation events.
+          </p>
+        </div>
+        <div class="step" data-decade="2050">
+          <h2>Water stress intensifies.</h2>
+          <p>
+            By mid-century, drought and flood risks begin separating geographically.
+          </p>
+        </div>
+        <div class="step" data-decade="2090">
+          <h2>Unequal impacts deepen.</h2>
+          <p>
+            By the 2090s, rainfall instability compounds existing social and economic vulnerabilities.
+          </p>
+        </div>
+      </div>
+      <div class="sticky-graphic">
+        <div class="map-label">Precipitation Anomaly · <span id="ch3-decade">2020s</span></div>
+        <svg id="ch3-svg" viewBox="0 0 960 500"></svg>
+        <svg id="ch3-legend" width="360" height="42"></svg>
+      </div>
+    </section>
 
-  <div class="emissions-grid">
-    <div>
-      <h3>Historical Top 10 Emitters</h3>
-      <div id="historical-emissions-chart"></div>
-    </div>
 
-    <div>
-      <h3>Present-Day Top 10 Emitters</h3>
-      <div id="present-emissions-chart"></div>
-    </div>
-  </div>
-</section>
 
+    <!-- CHAPTER 3 EVIDENCE: CONTRIBUTION VS PRECIPITATION IMPACT -->
+    <section id="precip-impact-scatter-section" class="impact-scatter-section">
+      <div class="scatter-copy">
+        <div class="chapter-num">Chapter 3 · Evidence</div>
+        <h2>Emissions contribution does not predict precipitation impact.</h2>
+        <p>
+          Each dot is a country. The x-axis shows historical cumulative CO₂ contribution,
+          while the y-axis shows projected precipitation disruption by the 2090s.
+          The mismatch shows that climate impacts do not fall neatly on the countries
+          most responsible for emissions.
+        </p>
+      </div>
+      <div class="scatter-card">
+        <svg id="precip-impact-scatter" viewBox="0 0 860 440"></svg>
+        <div id="precip-impact-note" class="scatter-note"></div>
+      </div>
+    </section>
+
+    <!-- CHAPTER 4: TEMPERATURE -->
+    <section id="ch4" class="chapter ch4">
+      <div class="chapter-text">
+        <div class="step active" data-mode="base">
+          <div class="chapter-num">Chapter 4 · Temperature</div>
+          <h2>Climate impacts are unevenly distributed.</h2>
+          <p>
+            Some of the countries facing the strongest projected warming contributed
+            relatively little to cumulative global emissions.
+          </p>
+        </div>
+        <div class="step" data-mode="wetbulb">
+          <h2>Dangerous heat stress expands.</h2>
+          <p>
+            Wet-bulb temperatures combine heat and humidity, creating conditions that
+            threaten human survivability.
+          </p>
+        </div>
+        <div class="step" data-mode="injustice">
+          <h2>Responsibility and vulnerability diverge.</h2>
+          <p>
+            Major historical emitters are highlighted in blue, while highly impacted
+            countries are highlighted in orange.
+          </p>
+          <div class="callout injustice-callout">
+            <strong>4% vs 30%</strong>
+            Sub-Saharan Africa has contributed only about 4% of historical global emissions,
+            but faces roughly 30% of global climate-related damages in this narrative framing.
+          </div>
+        </div>
+      </div>
+      <div class="sticky-graphic">
+        <div id="ch4-map-label" class="map-label">Temperature Anomaly · 2090s</div>
+        <svg id="ch4-svg" viewBox="0 0 960 500"></svg>
+        <svg id="ch4-legend" width="360" height="42"></svg>
+        <div id="ch4-wb-legend" class="impact-legend">Yellow/orange/pink = increasing wet-bulb heat risk</div>
+        <div id="ch4-injustice-legend" class="impact-legend">
+          <span class="major-emitter">Major historical emitters</span>
+          <span class="most-affected">Highly impacted countries</span>
+        </div>
+      </div>
+    </section>
+
+
+
+    <!-- CHAPTER 4 EVIDENCE: CONTRIBUTION VS TEMPERATURE IMPACT -->
+    <section id="temperature-impact-scatter-section" class="impact-scatter-section">
+      <div class="scatter-copy">
+        <div class="chapter-num">Chapter 4 · Evidence</div>
+        <h2>Responsibility and warming burden remain mismatched.</h2>
+        <p>
+          Countries with smaller cumulative emissions can still face severe projected
+          temperature increases. This scatterplot makes the climate injustice argument
+          visible outside the map: contribution and impact are not strongly aligned.
+        </p>
+      </div>
+      <div class="scatter-card">
+        <svg id="temperature-impact-scatter" viewBox="0 0 860 440"></svg>
+        <div id="temperature-impact-note" class="scatter-note"></div>
+      </div>
+    </section>
+
+    <!-- CHAPTER 5: YOUR WORLD -->
+    <section id="ch6" class="chapter ch6">
+      <div class="chapter-text">
+        <div class="step active">
+          <div class="chapter-num">Chapter 5 · Your World</div>
+          <h2>Select your country.</h2>
+          <p>
+            Click any country to compare projected warming trajectories under different
+            emissions scenarios and see a climate burden profile.
+          </p>
+        </div>
+      </div>
+      <div class="country-impact-layout">
+        <svg id="ch6-svg" viewBox="0 0 960 500"></svg>
+        <div class="country-panel">
+          <p id="country-placeholder">Click a country to explore its projected climate burden profile.</p>
+          <div id="country-detail" style="display:none;">
+            <h3 id="country-name"></h3>
+            <p id="country-sub"></p>
+            <svg id="country-line-svg" width="400" height="220"></svg>
+            <div id="country-climate-summary"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CHAPTER 6: EXPLORATION -->
+    <section id="explorer" class="standard-chapter exploration-chapter">
+      <div class="chapter-heading">
+        <div class="chapter-num">Chapter 6 · Exploration</div>
+        <h2>Explore Future Climate Scenarios</h2>
+        <p>
+          Compare climate trajectories across variables, decades, regions, and emissions scenarios.
+        </p>
+      </div>
+
+      <div class="explorer-controls">
+        <div id="scenario-toggle">
+          <button data-scen="ssp126">SSP1-2.6</button>
+          <button data-scen="ssp245" class="active">SSP2-4.5</button>
+          <button data-scen="ssp585">SSP5-8.5</button>
+        </div>
+        <label>Variable:
+          <select id="feature-select">
+            <option value="tas">Temperature anomaly</option>
+            <option value="pr">Precipitation anomaly</option>
+            <option value="siconc">Sea ice concentration</option>
+          </select>
+        </label>
+        <button id="play-btn">▶ Play</button>
+        <button id="clear-region" style="display:none;">Clear regions</button>
+      </div>
+
+      <div class="map-info">
+        <h3 id="map-title">Temperature anomaly maps</h3>
+        <p id="map-subtitle">Δ°C vs 1850–1900</p>
+        <span id="year-readout">2050s vs 2090s</span>
+      </div>
+
+      <div class="compare-maps">
+        <div>
+          <h4 id="map-left-label">2050s</h4>
+          <svg id="map-svg-left" viewBox="0 0 960 500"></svg>
+        </div>
+        <div>
+          <h4 id="map-right-label">2090s</h4>
+          <svg id="map-svg-right" viewBox="0 0 960 500"></svg>
+        </div>
+      </div>
+
+      <svg id="legend-svg" width="360" height="42"></svg>
+
+      <div class="line-chart-section">
+        <h3 id="line-title">Temperature anomaly</h3>
+        <svg id="line-svg" viewBox="0 0 1400 300"></svg>
+      </div>
+
+      <div id="region-filter-control" style="display:none;">
+        <span id="region-filter-badge"></span>
+        <button id="clear-region-ctrl">Clear selected regions</button>
+      </div>
+      <div id="notes-body"></div>
+    </section>
   </main>
 
+  <div id="tooltip"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <script src="https://unpkg.com/topojson-client@3"></script>
   <script src="story.js"></script>
 </body>
-
-
 </html>
