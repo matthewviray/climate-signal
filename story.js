@@ -1,6 +1,21 @@
 const MAP_W = 960, MAP_H = 500;
 const DLON = 5.0, DLAT = 3.77;
-const REGION_COLORS = ['#e05c3a', '#4a9eca'];
+const REGION_COLORS = ['#8b5cf6', '#f59e0b'];
+
+// Chapter 4 responsibility/impact overlay colors.
+// These avoid red/blue so they do not compete with the temperature anomaly map.
+const INJUSTICE_COLORS = {
+  impactedFill: '#8b5cf6',
+  impactedStroke: '#c4b5fd',
+  emitterFill: '#22c55e',   // green = major historical emitters
+  emitterStroke: '#86efac'
+};
+
+// Chapter 3 equatorial precipitation-risk overlay colors.
+const PRECIP_RISK_COLORS = {
+  dry: '#0b0b0b', // red/orange = much drier
+  wet: '#0b0b0b'  // blue = much wetter
+};
 
 const SCALES = {
   tas:    { domain: [-2, 12],   interp: d3.interpolateRdBu,  reverse: true,  label: 'Δ°C',     fmt: d => d3.format('+.1f')(d) + '°C' },
@@ -76,6 +91,7 @@ Promise.all([
 
   initEmissions(emissionsRows);
   initStoryMaps();
+  initCh3PrecipRisk(2090);
   initCh4WetBulb();
   initCh4Countries();
   initCh6();
@@ -478,7 +494,19 @@ function initBaseSvg(sel, opts = {}) {
   svg.append('path').datum(d3.geoGraticule().step([30,30])()).attr('class','graticule').attr('d',pathGen);
   svg.append('path').datum(LAND).attr('class','land-fill').attr('d',pathGen);
   svg.append('g').attr('class','cells-layer');
-  if (opts.wbLayer) svg.append('g').attr('class','wb-layer').style('opacity', 0);
+
+  if (opts.precipLayer) {
+    svg.append('g')
+      .attr('class', 'precip-risk-layer')
+      .style('opacity', 0);
+  }
+
+  if (opts.wbLayer) {
+    svg.append('g')
+      .attr('class','wb-layer')
+      .style('opacity', 0);
+  }
+
   svg.append('path').datum(LAND).attr('class','country-stroke').attr('d',pathGen);
   if (opts.clickable) {
     svg.append('g').attr('class','countries-click-layer');
@@ -550,8 +578,27 @@ function hideTip() { d3.select('#tooltip').style('opacity',0); }
 const STORY_CFG = {
   ch1: { svgId:'#ch1-svg', legId:'#ch1-legend', badgeId:'#ch1-decade', feature:'tas', scen:'ssp585' },
   ch2: { svgId:'#ch2-svg', legId:'#ch2-legend', badgeId:'#ch2-decade', feature:'siconc', scen:'ssp585' },
-  ch3: { svgId:'#ch3-svg', legId:'#ch3-legend', badgeId:'#ch3-decade', feature:'pr', scen:'ssp585' },
-  ch4: { svgId:'#ch4-svg', legId:'#ch4-legend', badgeId:null, feature:'tas', scen:'ssp585', fixedDecade:2090, wbLayer:true },
+
+  // Precipitation anomaly chapter
+  ch3: {
+    svgId:'#ch3-svg',
+    legId:'#ch3-legend',
+    badgeId:'#ch3-decade',
+    feature:'pr',
+    scen:'ssp585',
+    precipLayer:true
+  },
+
+  // Temperature / wet-bulb chapter
+  ch4: {
+    svgId:'#ch4-svg',
+    legId:'#ch4-legend',
+    badgeId:null,
+    feature:'tas',
+    scen:'ssp585',
+    fixedDecade:2090,
+    wbLayer:true
+  },
 };
 
 // Track what decade each story map is currently displaying so we can animate FROM it
@@ -561,7 +608,10 @@ const storyAnimToken = { ch1: 0, ch2: 0, ch3: 0 };
 
 function initStoryMaps() {
   Object.values(STORY_CFG).forEach(cfg => {
-    initBaseSvg(cfg.svgId, { wbLayer: !!cfg.wbLayer });
+    initBaseSvg(cfg.svgId, {
+  wbLayer: !!cfg.wbLayer,
+  precipLayer: !!cfg.precipLayer
+});
     drawLegendBar(cfg.legId, cfg.feature);
     const decade = cfg.fixedDecade || 2020;
     drawCells(d3.select(cfg.svgId), getField(cfg.feature, cfg.scen, decade), cfg.feature);
@@ -654,6 +704,75 @@ function showWetBulb(visible) {
   if (leg) leg.classList.toggle('visible', visible);
 }
 
+// ── CHAPTER 3 EQUATORIAL PRECIPITATION OVERLAY ───────────────────────────────
+// Mirrors the Chapter 4 wet-bulb overlay: draw once from SSP5-8.5 2090s,
+// then fade the layer on/off when the precipitation-risk scroll step is active.
+function initCh3PrecipRisk() {
+  const svg = d3.select('#ch3-svg');
+  const precipLayer = svg.select('.precip-risk-layer');
+  const field = getField('pr', 'ssp585', 2090);
+
+  if (!field || precipLayer.empty()) return;
+
+  precipLayer.selectAll('*').remove();
+
+  const zones = [
+    {
+      cls: 'precip-dry',
+      label: 'Much drier',
+      latLim: 25,
+      test: v => v <= -25,
+      fill: PRECIP_RISK_COLORS.dry,
+      op: 0.72
+    },
+    {
+      cls: 'precip-wet',
+      label: 'Much wetter',
+      latLim: 25,
+      test: v => v >= 25,
+      fill: PRECIP_RISK_COLORS.wet,
+      op: 0.72
+    }
+  ];
+
+  zones.forEach(z => {
+    precipLayer.selectAll(`rect.${z.cls}`)
+      .data(CELL_RECTS.filter(r => {
+        const v = field[r.i][r.j];
+
+        return (
+          Number.isFinite(v) &&
+          Math.abs(r.lat) <= z.latLim &&
+          Math.abs(v) >= 25 &&
+          z.test(v)
+        );
+      }))
+      .join('rect')
+      .attr('class', z.cls)
+      .attr('x', d => d.x)
+      .attr('y', d => d.y)
+      .attr('width', d => Math.max(0.5, d.w + 0.5))
+      .attr('height', d => Math.max(0.5, d.h + 0.5))
+      .attr('fill', z.fill)
+      .attr('fill-opacity', z.op)
+      .attr('stroke', 'rgba(255,255,255,0.55)')
+      .attr('stroke-width', 0.25)
+      .attr('pointer-events', 'none');
+  });
+}
+
+function showPrecipRisk(visible) {
+  d3.select('#ch3-svg')
+    .select('.precip-risk-layer')
+    .transition()
+    .duration(700)
+    .ease(d3.easeCubicInOut)
+    .style('opacity', visible ? 1 : 0);
+
+  const leg = document.getElementById('ch3-precip-risk-legend');
+  if (leg) leg.classList.toggle('visible', visible);
+}
+
 // ── CHAPTER 4 COUNTRY IMPACT LAYER ────────────────────────────────────────────
 function initCh4Countries() {
   const svg = d3.select('#ch4-svg');
@@ -698,25 +817,25 @@ function initCh4Countries() {
       .attr('d', pathGen)
       .attr('fill', d => {
         const id = parseInt(d.id);
-        if (mostAffectedIds.has(id)) return '#e0542a';
-        if (MAJOR_EMITTER_IDS.has(id)) return '#2e78b0';
+        if (mostAffectedIds.has(id)) return INJUSTICE_COLORS.impactedFill;
+        if (MAJOR_EMITTER_IDS.has(id)) return INJUSTICE_COLORS.emitterFill;
         return 'none';
       })
       .attr('fill-opacity', d => {
         const id = parseInt(d.id);
-        if (mostAffectedIds.has(id)) return 0.52;
-        if (MAJOR_EMITTER_IDS.has(id)) return 0.30;
+        if (mostAffectedIds.has(id)) return 0.50;
+        if (MAJOR_EMITTER_IDS.has(id)) return 0.42;
         return 0;
       })
       .attr('stroke', d => {
         const id = parseInt(d.id);
-        if (mostAffectedIds.has(id)) return '#ff7a58';
-        if (MAJOR_EMITTER_IDS.has(id)) return '#60a8de';
+        if (mostAffectedIds.has(id)) return INJUSTICE_COLORS.impactedStroke;
+        if (MAJOR_EMITTER_IDS.has(id)) return INJUSTICE_COLORS.emitterStroke;
         return 'none';
       })
       .attr('stroke-width', d => {
         const id = parseInt(d.id);
-        return (mostAffectedIds.has(id) || MAJOR_EMITTER_IDS.has(id)) ? 0.9 : 0;
+        return (mostAffectedIds.has(id) || MAJOR_EMITTER_IDS.has(id)) ? 1.1 : 0;
       })
       .attr('pointer-events', 'none');
 }
@@ -929,15 +1048,38 @@ function initScrollSpy() {
   const stepObs = new IntersectionObserver(entries => {
     entries.forEach(entry => {
       if (!entry.isIntersecting) return;
+
       const step = entry.target;
       const chEl = step.closest('.chapter');
       if (!chEl) return;
+
       chEl.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
       step.classList.add('active');
+
       const decade = parseInt(step.dataset.decade);
-      if (!isNaN(decade)) updateStoryMap(chEl.id, decade);
+      const mode = step.dataset.mode || 'base';
+
+      if (!isNaN(decade)) {
+        updateStoryMap(chEl.id, decade);
+      }
+
+      // Chapter 3 precipitation-risk overlay, implemented like the wet-bulb overlay.
+      if (chEl.id === 'ch3') {
+        showPrecipRisk(mode === 'precip-risk');
+
+        const label = chEl.querySelector('.map-label');
+        if (label) {
+          const decadeText = !isNaN(decade) ? `${decade}s` : '2090s';
+          label.innerHTML = mode === 'precip-risk'
+            ? `Equatorial High-Precipitation Anomaly · <span id="ch3-decade">${decadeText}</span>`
+            : `Precipitation Anomaly · <span id="ch3-decade">${decadeText}</span>`;
+        }
+      } else {
+        showPrecipRisk(false);
+      }
     });
   }, { threshold: 0.55 });
+
   document.querySelectorAll('.step[data-decade]').forEach(s => stepObs.observe(s));
 
   const ch4Steps = document.querySelectorAll('#ch4 .step');
@@ -945,23 +1087,29 @@ function initScrollSpy() {
     wetbulb:  'Wet-Bulb Risk Zones · 2090s · Tropical Approximation',
     injustice: 'Climate Injustice · 2090s · Impact vs. Responsibility',
   };
+
   const ch4Obs = new IntersectionObserver(entries => {
     entries.forEach(entry => {
       if (!entry.isIntersecting) return;
+
       ch4Steps.forEach(s => s.classList.remove('active'));
       entry.target.classList.add('active');
+
       const mode = entry.target.dataset.mode;
       showWetBulb(mode === 'wetbulb');
       showInjustice(mode === 'injustice');
+
       const lbl = document.getElementById('ch4-map-label');
       if (lbl) lbl.textContent = CH4_LABELS[mode] || 'Temperature Anomaly · 2090s · Who Gets Hit Hardest';
     });
   }, { threshold: 0.55 });
+
   ch4Steps.forEach(s => ch4Obs.observe(s));
 
   const fadeObs = new IntersectionObserver(entries => {
     entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('active'); });
   }, { threshold: 0.3 });
+
   document.querySelectorAll('#ch5 .step, #ch6 .step').forEach(s => fadeObs.observe(s));
 }
 
@@ -1481,7 +1629,7 @@ function drawImpactScatter(sel, noteSel, metric) {
     .attr('font-family', 'var(--mono)')
     .attr('font-size', 10)
     .attr('fill', 'var(--ink-soft)')
-    .text('Blue = major historical emitters · Orange = others');
+    .text('Gold = major historical emitters · Violet = others');
 
   if (note) {
     const rText = fit ? `R² ≈ ${d3.format('.2f')(fit.r2)}` : 'R² unavailable';

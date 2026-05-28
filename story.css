@@ -367,12 +367,21 @@ select {
 }
 
 .major-emitter::before {
-  background: #2e78b0;
+  background: #22c55e;
 }
 
 .most-affected::before {
-  background: #e0542a;
+  background: #8b5cf6;
 }
+
+.precip-risk-legend .precip-dry::before {
+  background: #e05c3a;
+}
+
+.precip-risk-legend .precip-wet::before {
+  background: #4a9eca;
+}
+
 
 /* ── YOUR WORLD ────────────────────────────────────────────────────────────── */
 #ch6 {
@@ -1080,13 +1089,13 @@ select {
 }
 
 .scatter-dot {
-  fill: rgba(224, 92, 58, 0.64);
+  fill: rgba(139, 92, 246, 0.64);
   stroke: rgba(255,255,255,0.42);
   stroke-width: .55;
 }
 
 .scatter-dot.major-emitter-dot {
-  fill: rgba(74, 158, 202, 0.8);
+  fill: rgba(250, 204, 21, 0.86);
   stroke: rgba(255,255,255,0.72);
 }
 

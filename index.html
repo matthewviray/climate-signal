@@ -105,10 +105,11 @@
             By mid-century, drought and flood risks begin separating geographically.
           </p>
         </div>
-        <div class="step" data-decade="2090">
-          <h2>Unequal impacts deepen.</h2>
+        <div class="step" data-decade="2090" data-mode="precip-risk">
+          <h2>Equatorial rainfall intensification.</h2>
           <p>
-            By the 2090s, rainfall instability compounds existing social and economic vulnerabilities.
+            By the 2090s, highlighted near-equator regions show strong positive precipitation anomalies.
+            Darker overlays mark areas with larger projected rainfall increases under SSP5-8.5.
           </p>
         </div>
       </div>
@@ -116,6 +117,9 @@
         <div class="map-label">Precipitation Anomaly · <span id="ch3-decade">2020s</span></div>
         <svg id="ch3-svg" viewBox="0 0 960 500"></svg>
         <svg id="ch3-legend" width="360" height="42"></svg>
+        <div id="ch3-precip-risk-legend" class="impact-legend precip-risk-legend">
+  <span class="precip-wet">Black = equatorial anomaly ≥ 25%</span>
+</div>
       </div>
     </section>
 
@@ -160,8 +164,8 @@
         <div class="step" data-mode="injustice">
           <h2>Responsibility and vulnerability diverge.</h2>
           <p>
-            Major historical emitters are highlighted in blue, while highly impacted
-            countries are highlighted in orange.
+            Major historical emitters are highlighted in gold, while highly impacted
+            countries are highlighted in violet.
           </p>
           <div class="callout injustice-callout">
             <strong>4% vs 30%</strong>
