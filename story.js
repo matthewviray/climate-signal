@@ -18,7 +18,7 @@ const PRECIP_RISK_COLORS = {
 };
 
 const SCALES = {
-  tas:    { domain: [-2, 12],   interp: d3.interpolateRdBu,  reverse: true,  label: 'Δ°C',     fmt: d => d3.format('+.1f')(d) + '°C' },
+  tas:    { domain: [-2, 8],    interp: d3.interpolateRdBu,  reverse: true,  label: 'Δ°C',     fmt: d => d3.format('+.1f')(d) + '°C' },
   pr:     { domain: [-30, 30],  interp: d3.interpolateBrBG,  reverse: false, label: 'Δ% precip', fmt: d => d3.format('+.0f')(d) + '%' },
   siconc: { domain: [1, 85],    interp: d3.interpolateRgbBasis(['#111b24','#1e4d7a','#2572b4','#4a9eca','#a8d4f0','#f0f4f8']), reverse: true, label: '% ice', fmt: d => d3.format('.0f')(d) + '%' }
 };
@@ -248,26 +248,32 @@ function drawIntroStats(countries, historicalTop, presentTop) {
     iceDeclineLabel = `${d3.format('+.0f')(pctChange)}%`;
   }
 
+  const SSP5_NOTE = `<span class="stat-ssp-note">SSP5-8.5 = worst case: no meaningful action on emissions</span>`;
+
   const stats = [
     {
-      label: 'Temperature anomaly',
+      label: 'Temperature increase',
       value: tas2090 != null ? `${d3.format('+.1f')(tas2090)}°C` : '+4.0°C',
-      sub: 'projected global mean warming by the 2090s under SSP5-8.5'
+      sub: 'projected global average warming by the 2090s',
+      note: SSP5_NOTE
     },
     {
-      label: 'Sea ice decline',
+      label: 'Sea ice loss',
       value: iceDeclineLabel,
-      sub: 'relative change in late-century sea ice concentration under SSP5-8.5'
+      sub: 'relative loss in late-century sea ice coverage',
+      note: SSP5_NOTE
     },
     {
-      label: 'Precipitation anomaly',
+      label: 'Rainfall disruption',
       value: pr2090 != null ? `${d3.format('+.0f')(pr2090)}%` : 'Shifting',
-      sub: 'global average change masks stronger regional drought and flood extremes'
+      sub: 'global average shift — regional extremes are far larger',
+      note: ''
     },
     {
-      label: 'Emissions concentration',
+      label: 'Emissions concentrated',
       value: `${d3.format('.0%')(top10Historical / totalHistorical)}`,
-      sub: `share of cumulative CO₂ from top historical emitters; latest annual total ≈ ${d3.format('.1f')(totalLatestGt)} Gt in ${latestYear}`
+      sub: `of all historical CO₂ came from the top 10 emitting nations`,
+      note: ''
     }
   ];
 
@@ -279,6 +285,7 @@ function drawIntroStats(countries, historicalTop, presentTop) {
       <div class="stat-value">${d.value}</div>
       <div class="stat-label">${d.label}</div>
       <div class="stat-sub">${d.sub}</div>
+      ${d.note}
     `);
 }
 
@@ -486,25 +493,95 @@ function drawEmissionsBarChart(sel, data, valueKey, label) {
 
 
 
+// ── CANVAS MAP RENDERING ──────────────────────────────────────────────────────
+// Renders a field into an offscreen canvas as projected quadrilaterals.
+function renderToCanvas(canvas, field, feature) {
+  const N_LAT = DATA.meta.lat.length, N_LON = DATA.meta.lon.length;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, MAP_W, MAP_H);
+  ctx.globalAlpha = 0.94;
+  ctx.lineWidth = 0.6;
+  const isIce = feature === 'siconc';
+  const hw = DLON / 2, hh = DLAT / 2;
+  for (let i = 0; i < N_LAT; i++) {
+    const lat = DATA.meta.lat[i];
+    const lat0 = Math.max(-89.9999, lat - hh);
+    const lat1 = Math.min( 89.9999, lat + hh);
+    for (let j = 0; j < N_LON; j++) {
+      const val = field[i][j];
+      if (isIce && val <= 0.5) continue;
+      const lon = DATA.meta.lon[j];
+      const lon0 = Math.max(-179.9999, lon - hw);
+      const lon1 = Math.min( 179.9999, lon + hw);
+      const tl = projection([lon0, lat1]);
+      const tr = projection([lon1, lat1]);
+      const br = projection([lon1, lat0]);
+      const bl = projection([lon0, lat0]);
+      if (!tl || !tr || !br || !bl) continue;
+      const color = colorFor(val, feature);
+      ctx.fillStyle = color;
+      ctx.strokeStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(tl[0], tl[1]);
+      ctx.lineTo(tr[0], tr[1]);
+      ctx.lineTo(br[0], br[1]);
+      ctx.lineTo(bl[0], bl[1]);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+// Attach a live <canvas> inside a <foreignObject> clipped to the sphere.
+// All drawing goes directly to this canvas — no toDataURL() ever needed.
+function attachDisplayCanvas(svg, clipId) {
+  const fo = svg.append('foreignObject')
+    .attr('x', 0).attr('y', 0)
+    .attr('width', MAP_W).attr('height', MAP_H)
+    .attr('clip-path', `url(#${clipId})`);
+  const canvasEl = document.createElement('canvas');
+  canvasEl.width = MAP_W;
+  canvasEl.height = MAP_H;
+  canvasEl.style.display = 'block';
+  fo.node().appendChild(canvasEl);
+  return canvasEl;
+}
+
+function mkOffscreen() {
+  const c = document.createElement('canvas');
+  c.width = MAP_W; c.height = MAP_H;
+  return c;
+}
+
 // ── BASE MAP INIT ─────────────────────────────────────────────────────────────
 function initBaseSvg(sel, opts = {}) {
   const svg = d3.select(sel);
   svg.selectAll('*').remove();
+
+  const clipId = 'sph-clip-' + sel.replace(/[^a-z0-9]/gi, '');
+  svg.append('defs').append('clipPath').attr('id', clipId)
+    .append('path').datum({type:'Sphere'}).attr('d', pathGen);
+
   svg.append('path').datum({type:'Sphere'}).attr('class','ocean-sphere').attr('d',pathGen);
   svg.append('path').datum(d3.geoGraticule().step([30,30])()).attr('class','graticule').attr('d',pathGen);
   svg.append('path').datum(LAND).attr('class','land-fill').attr('d',pathGen);
-  svg.append('g').attr('class','cells-layer');
+
+  const node = svg.node();
+  if (!node) return svg;
+
+  // Live canvas embedded directly in SVG — no PNG encoding, GPU-accelerated blending
+  node._displayCanvas = attachDisplayCanvas(svg, clipId);
+  node._canvasA = mkOffscreen(); // "from" frame for blending
+  node._canvasB = mkOffscreen(); // "to" frame for blending
+  node._rafId = null;
 
   if (opts.precipLayer) {
-    svg.append('g')
-      .attr('class', 'precip-risk-layer')
-      .style('opacity', 0);
+    svg.append('g').attr('class', 'precip-risk-layer').style('opacity', 0);
   }
-
   if (opts.wbLayer) {
-    svg.append('g')
-      .attr('class','wb-layer')
-      .style('opacity', 0);
+    svg.append('g').attr('class','wb-layer').style('opacity', 0);
   }
 
   svg.append('path').datum(LAND).attr('class','country-stroke').attr('d',pathGen);
@@ -517,27 +594,50 @@ function initBaseSvg(sel, opts = {}) {
 }
 
 // ── DRAW CELLS ────────────────────────────────────────────────────────────────
-// duration=0: instant. duration>0: smooth color tween on existing cells.
-function drawCells(svg, field, feature, filterFn, duration = 0) {
-  if (!field || !CELL_RECTS) return;
-  const visible = CELL_RECTS.filter(r => {
-    if (feature === 'siconc' && field[r.i][r.j] < 0.5) return false;
-    return filterFn ? filterFn(r) : true;
-  });
-  svg.select('.cells-layer').selectAll('rect.cell')
-    .data(visible, d => `${d.i}-${d.j}`)
-    .join(
-      enter => enter.append('rect').attr('class','cell')
-        .attr('x', d=>d.x).attr('y', d=>d.y)
-        .attr('width', d=>Math.max(.5, d.w+.5))
-        .attr('height', d=>Math.max(.5, d.h+.5))
-        .attr('fill', d => colorFor(field[d.i][d.j], feature)),
-      update => duration > 0
-        ? update.transition().duration(duration).ease(d3.easeCubicInOut)
-            .attr('fill', d => colorFor(field[d.i][d.j], feature))
-        : update.attr('fill', d => colorFor(field[d.i][d.j], feature)),
-      exit => exit.remove()
-    );
+// duration=0 → instant. duration>0 → smooth RAF blend from current display state.
+// If called while a blend is in progress, snapshots the current interpolated frame
+// as the new "from" so transitions always chain seamlessly.
+function drawCells(svg, field, feature, duration = 0) {
+  if (!field || !DATA) return;
+  const node = svg.node();
+  if (!node || !node._displayCanvas) return;
+
+  // Stop any in-progress animation and snapshot current display as "from"
+  if (node._rafId) {
+    cancelAnimationFrame(node._rafId);
+    node._rafId = null;
+  }
+  const ctxA = node._canvasA.getContext('2d');
+  ctxA.clearRect(0, 0, MAP_W, MAP_H);
+  ctxA.drawImage(node._displayCanvas, 0, 0);
+
+  // Render new target into canvasB
+  renderToCanvas(node._canvasB, field, feature);
+
+  const display = node._displayCanvas;
+  const canvasA = node._canvasA, canvasB = node._canvasB;
+
+  if (duration <= 0) {
+    const ctx = display.getContext('2d');
+    ctx.clearRect(0, 0, MAP_W, MAP_H);
+    ctx.drawImage(canvasB, 0, 0);
+    return;
+  }
+
+  const start = performance.now();
+  function frame(now) {
+    const t = Math.min(1, (now - start) / duration);
+    const ease = d3.easeCubicInOut(t);
+    const ctx = display.getContext('2d');
+    ctx.clearRect(0, 0, MAP_W, MAP_H);
+    ctx.globalAlpha = 1 - ease;
+    ctx.drawImage(canvasA, 0, 0);
+    ctx.globalAlpha = ease;
+    ctx.drawImage(canvasB, 0, 0);
+    ctx.globalAlpha = 1;
+    node._rafId = t < 1 ? requestAnimationFrame(frame) : null;
+  }
+  node._rafId = requestAnimationFrame(frame);
 }
 
 function getField(feature, scen, decade) {
@@ -640,12 +740,12 @@ function updateStoryMap(chId, targetDecade) {
 
   let idx = 0;
   function tick() {
-    if (storyAnimToken[chId] !== token) return; // superseded by newer scroll
+    if (storyAnimToken[chId] !== token) return;
     if (idx >= frames.length) return;
 
     const dec = frames[idx];
     const field = getField(cfg.feature, cfg.scen, dec);
-    if (field) drawCells(d3.select(cfg.svgId), field, cfg.feature, null, perFrame);
+    if (field) drawCells(d3.select(cfg.svgId), field, cfg.feature, perFrame);
     if (cfg.badgeId) animateBadge(cfg.badgeId, `${dec}s`);
 
     idx++;
@@ -664,10 +764,7 @@ function animateBadge(sel, text) {
 
 // ── HERO BG ───────────────────────────────────────────────────────────────────
 function initHeroBg() {
-  const svg = d3.select('#hero-bg-svg');
-  svg.append('path').datum({type:'Sphere'}).attr('class','ocean-sphere').attr('d',pathGen);
-  svg.append('path').datum(LAND).attr('class','land-fill').attr('d',pathGen);
-  svg.append('g').attr('class','cells-layer');
+  const svg = initBaseSvg('#hero-bg-svg');
   drawCells(svg, getField('tas','ssp585',2090), 'tas');
 }
 
@@ -853,7 +950,7 @@ function initForkMaps() {
   ['#fork-svg-126','#fork-svg-585'].forEach(sel => initBaseSvg(sel));
   drawCells(d3.select('#fork-svg-126'), getField('tas','ssp126',2090), 'tas');
   drawCells(d3.select('#fork-svg-585'), getField('tas','ssp585',2090), 'tas');
-  drawLegendBar('#fork-legend','tas');
+  if (document.querySelector('#fork-legend')) drawLegendBar('#fork-legend','tas');
 }
 
 // ── CH6 COUNTRY CLICK ─────────────────────────────────────────────────────────
@@ -924,7 +1021,7 @@ function showCountryDetail(feature) {
   d3.select('#country-placeholder').style('display','none');
   d3.select('#country-detail').style('display','block');
   d3.select('#country-name').text(name);
-  d3.select('#country-sub').text('Temperature anomaly vs 1850–1900 baseline');
+  d3.select('#country-sub').text('Projected warming vs. pre-industrial baseline · three future paths');
 
   const centroid = pathGen.centroid(feature);
   if (!centroid || isNaN(centroid[0])) return;
@@ -981,15 +1078,15 @@ function showCountryDetail(feature) {
       <div class="warming-stats">
         <div class="wstat">
           <span class="wstat-val" style="color:var(--scen-585)">+${w585.toFixed(1)}°C</span>
-          <span class="wstat-lbl">SSP5-8.5 · 2090s</span>
+          <span class="wstat-lbl">No action · 2090s</span>
         </div>
         <div class="wstat">
           <span class="wstat-val" style="color:var(--scen-126)">+${w126.toFixed(1)}°C</span>
-          <span class="wstat-lbl">SSP1-2.6 · 2090s</span>
+          <span class="wstat-lbl">Strong action · 2090s</span>
         </div>
         <div class="wstat">
           <span class="wstat-val" style="color:var(--ink-soft)">${(w585 - w126).toFixed(1)}°C</span>
-          <span class="wstat-lbl">Gap · choice</span>
+          <span class="wstat-lbl">Difference if world acts</span>
         </div>
       </div>
       <p class="climate-narrative">${narrative}</p>
@@ -1128,11 +1225,23 @@ function initExplorer() {
 
   // ── Explorer map helpers ──
   function initEMap(sel) {
-    const svg = d3.select(sel); svg.selectAll('*').remove();
+    const svg = d3.select(sel);
+    svg.selectAll('*').remove();
+
+    const clipId = 'sph-clip-' + sel.replace(/[^a-z0-9]/gi, '');
+    svg.append('defs').append('clipPath').attr('id', clipId)
+      .append('path').datum({type:'Sphere'}).attr('d', pathGen);
+
     svg.append('path').datum({type:'Sphere'}).attr('class','ocean-sphere').attr('d',pathGen);
     svg.append('path').datum(d3.geoGraticule().step([30,30])()).attr('class','graticule').attr('d',pathGen);
     svg.append('path').datum(LAND).attr('class','land-fill').attr('d',pathGen);
-    svg.append('g').attr('class','cells-layer');
+
+    const node = svg.node();
+    node._displayCanvas = attachDisplayCanvas(svg, clipId);
+    node._canvasA = mkOffscreen();
+    node._canvasB = mkOffscreen();
+    node._rafId = null;
+
     svg.append('path').datum(LAND).attr('class','country-stroke').attr('d',pathGen);
     svg.append('g').attr('class','region-hl-layer');
     if (state.feature !== 'siconc') {
@@ -1142,27 +1251,12 @@ function initExplorer() {
     }
   }
 
-  // duration=0 → instant, duration>0 → smooth color morph
   function updateEMap(sel, decade, duration = 0) {
     const field = getField(state.feature, state.scenario, decade);
-    if (!field) return;
     const svg = d3.select(sel);
-    const visible = CELL_RECTS.filter(r => state.feature==='siconc' ? field[r.i][r.j]>0.5 : true);
-    svg.select('.cells-layer').selectAll('rect.cell')
-      .data(visible, d=>`${d.i}-${d.j}`)
-      .join(
-        enter => enter.append('rect').attr('class','cell')
-          .attr('x',d=>d.x).attr('y',d=>d.y)
-          .attr('width',d=>Math.max(.5,d.w+.5)).attr('height',d=>Math.max(.5,d.h+.5))
-          .attr('fill', d=>colorFor(field[d.i][d.j],state.feature))
-          .on('mouseenter',(e,d)=>showTip(e,`<strong>${SCALES[state.feature].fmt(field[d.i][d.j])}</strong><br>${decade}s`))
-          .on('mouseleave',hideTip),
-        update => duration > 0
-          ? update.transition().duration(duration).ease(d3.easeCubicInOut)
-              .attr('fill', d=>colorFor(field[d.i][d.j],state.feature))
-          : update.attr('fill', d=>colorFor(field[d.i][d.j],state.feature)),
-        exit => exit.remove()
-      );
+    const node = svg.node();
+    if (!field || !node || !node._displayCanvas) return;
+    drawCells(svg, field, state.feature, duration);
     drawERegions(svg);
   }
 
@@ -1414,10 +1508,16 @@ function initExplorer() {
   d3.select('#clear-region').on('click', () => { state.regions=[]; updateRegionUI(); redrawE(400); drawELine(); });
   d3.select('#clear-region-ctrl').on('click', () => { state.regions=[]; updateRegionUI(); redrawE(400); drawELine(); });
 
+  function setActiveExplainer(boxId, attrName, value) {
+    d3.selectAll(`#${boxId} .explorer-explainer`).classed('active', false);
+    d3.select(`#${boxId} .explorer-explainer[${attrName}="${value}"]`).classed('active', true);
+  }
+
   d3.selectAll('#scenario-toggle button').on('click', function() {
     state.scenario=this.dataset.scen;
     d3.selectAll('#scenario-toggle button').classed('active',false);
     d3.select(this).classed('active',true);
+    setActiveExplainer('scenario-explainer-box', 'data-scen', state.scenario);
     redrawE(500); drawELine();
   });
 
@@ -1426,6 +1526,7 @@ function initExplorer() {
     state.feature=this.value;
     if (state.feature==='siconc') state.regions=[];
     updateRegionUI();
+    setActiveExplainer('variable-explainer-box', 'data-feat', state.feature);
     const meta=FEAT_META[state.feature];
     d3.select('#map-title').text(meta.title);
     d3.select('#map-subtitle').text(meta.sub);

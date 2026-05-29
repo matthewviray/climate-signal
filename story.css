@@ -141,6 +141,18 @@ select {
   margin-top: 6px;
 }
 
+.stat-ssp-note {
+  display: inline-block;
+  margin-top: 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .04em;
+  color: var(--scen-585);
+  background: rgba(224, 92, 58, .10);
+  border: 1px solid rgba(224, 92, 58, .25);
+  padding: 3px 8px;
+}
+
 .stat-card.sahara-stat {
   border-color: rgba(224,92,58,.42);
   background:
@@ -554,13 +566,78 @@ select {
 .explorer-controls {
   display: flex;
   flex-wrap: wrap;
-  gap: 18px 24px;
-  align-items: center;
+  gap: 24px 32px;
+  align-items: flex-start;
   margin: 34px 0 24px;
-  padding: 16px 18px;
+  padding: 20px 22px;
   background: var(--panel);
   border: 1px solid var(--rule);
   border-radius: 4px;
+}
+
+.explorer-control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.explorer-control-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.explorer-control-actions {
+  justify-content: flex-end;
+  align-self: flex-end;
+}
+
+/* Explainer text below each control */
+.explorer-explainers {
+  max-width: 380px;
+}
+.explorer-explainer {
+  display: none;
+  font-size: 13px;
+  color: var(--ink-soft);
+  line-height: 1.55;
+  padding: 8px 12px;
+  background: rgba(255,255,255,.04);
+  border-left: 2px solid var(--rule);
+  margin-top: 2px;
+}
+.explorer-explainer.active { display: block; }
+.explorer-explainer strong { color: var(--ink); }
+
+/* SSP code badge inside scenario buttons */
+.btn-code {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .06em;
+  opacity: .7;
+  display: block;
+  margin-top: 2px;
+}
+
+/* SSP code in scenario cards (chapter 5) */
+.scen-code {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .08em;
+  opacity: .75;
+}
+
+/* Map scenario annotation note */
+.map-scenario-note {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-faint);
+  letter-spacing: .02em;
+  margin-bottom: 6px;
+  line-height: 1.5;
+  max-width: 560px;
 }
 
 #scenario-toggle {
@@ -585,6 +662,10 @@ select {
   text-transform: uppercase;
   cursor: pointer;
   border-right: 1px solid #2e2e2e;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.3;
 }
 
 #scenario-toggle button:last-child {
@@ -746,6 +827,12 @@ select {
 .cell {
   fill-opacity: .9;
   shape-rendering: crispEdges;
+}
+
+/* The live canvas inside foreignObject needs display:block to avoid inline gaps */
+.cells-canvas-back,
+.cells-canvas-front {
+  image-rendering: auto;
 }
 
 .axis text,
@@ -945,6 +1032,7 @@ select {
 
 .ch2 .chapter-num { color: var(--ch2); }
 .emissions-chapter .chapter-num { color: var(--accent); }
+.scenarios-chapter .chapter-num { color: var(--scen-126); }
 .ch3 .chapter-num { color: var(--ch3); }
 .ch4 .chapter-num { color: var(--ch4); }
 .ch6 .chapter-num { color: var(--ch6); }
@@ -969,6 +1057,55 @@ select {
   font-size: 16px;
   max-width: 780px;
 }
+
+/* ── Scenarios chapter ── */
+.scenarios-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 40px;
+}
+@media (max-width: 900px) { .scenarios-grid { grid-template-columns: 1fr; } }
+
+.scenario-card {
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 28px 24px;
+  background: var(--bg-panel);
+}
+.scenario-card .scen-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 6px;
+}
+.scenario-card .scen-name {
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 400;
+  margin-bottom: 8px;
+  color: var(--ink);
+}
+.scenario-card .scen-temp {
+  font-family: var(--mono);
+  font-size: 28px;
+  font-weight: 500;
+  margin-bottom: 14px;
+}
+.scenario-card p {
+  font-size: 15px;
+  color: var(--ink-soft);
+  line-height: 1.6;
+  margin: 0;
+}
+.scenario-best { border-top: 3px solid var(--scen-126); }
+.scenario-best .scen-temp { color: var(--scen-126); }
+.scenario-mid  { border-top: 3px solid var(--scen-245); }
+.scenario-mid  .scen-temp { color: var(--scen-245); }
+.scenario-worst { border-top: 3px solid var(--scen-585); }
+.scenario-worst .scen-temp { color: var(--scen-585); }
 
 #emissions-chapter #emissions-comparison-section {
   padding: 0;

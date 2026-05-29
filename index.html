@@ -28,113 +28,88 @@
       <div id="stats-grid" class="stats-grid"></div>
     </section>
 
-    <!-- CHAPTER 1: SEA ICE -->
+    <!-- CHAPTER 1: SEA ICE · AND — the planet is visibly changing -->
     <section id="ch2" class="chapter ch2">
       <div class="chapter-text">
         <div class="step active" data-decade="2020">
           <div class="chapter-num">Chapter 1 · Sea Ice</div>
-          <h2>Polar regions are changing fastest.</h2>
+          <h2>The Arctic is disappearing before our eyes.</h2>
           <p>
-            Warming is not evenly distributed across the planet. Sea ice decline is one
-            of the clearest visible indicators of accelerating climate change.
+            Sea ice is one of the most visible signs that the planet is warming — and it's
+            shrinking faster at the poles than anywhere else on Earth. This is already happening now.
           </p>
         </div>
         <div class="step" data-decade="2050">
-          <h2>Mid-century ice decline accelerates.</h2>
+          <h2>By mid-century, summer ice loss is severe.</h2>
           <p>
-            By the 2050s, seasonal sea ice loss intensifies under continued emissions growth.
+            Under a high-emissions path, the Arctic loses most of its summer sea ice within
+            decades. Ice that took thousands of years to form disappears in a single lifetime.
           </p>
         </div>
         <div class="step" data-decade="2090">
-          <h2>High-emissions futures reshape the Arctic.</h2>
+          <h2>By 2090, the Arctic looks almost unrecognizable.</h2>
           <p>
-            By the end of the century, high-emissions futures show dramatic reductions
-            in sea ice coverage.
+            What was once a frozen ocean becomes open water for much of the year. The loss
+            of ice means the ocean absorbs more heat — accelerating warming everywhere else.
           </p>
         </div>
       </div>
       <div class="sticky-graphic">
-        <div class="map-label">Sea Ice Concentration · <span id="ch2-decade">2020s</span></div>
+        <div class="map-label">Sea Ice Coverage · <span id="ch2-decade">2020s</span></div>
+        <div class="map-scenario-note">Showing the worst-case emissions path (SSP5-8.5) — a future where the world takes no meaningful action to cut greenhouse gases</div>
         <svg id="ch2-svg" viewBox="0 0 960 500"></svg>
         <svg id="ch2-legend" width="360" height="42"></svg>
       </div>
     </section>
 
-    <!-- CHAPTER 2: EMISSIONS -->
-    <section id="emissions-chapter" class="standard-chapter emissions-chapter">
-      <div class="chapter-heading">
-        <div class="chapter-num">Chapter 2 · Emissions</div>
-        <h2>Who has contributed most to emissions?</h2>
-        <p>
-          Climate responsibility changes depending on whether we look at the past or the present.
-          Historical emissions show long-term responsibility, while recent emissions show who is
-          contributing most today.
-        </p>
-      </div>
-
-      <section id="emissions-comparison-section">
-        <h3>Past vs Present Emissions Contributions</h3>
-        <div id="emissions-map"></div>
-        <div class="emissions-grid">
-          <div>
-            <h4>Historical Top 10 Emitters</h4>
-            <div id="historical-emissions-chart"></div>
-          </div>
-          <div>
-            <h4>Present-Day Top 10 Emitters</h4>
-            <div id="present-emissions-chart"></div>
-          </div>
-        </div>
-      </section>
-    </section>
-
-    <!-- CHAPTER 3: PRECIPITATION -->
+    <!-- CHAPTER 2: PRECIPITATION · AND — it's not just heat -->
     <section id="ch3" class="chapter ch3">
       <div class="chapter-text">
         <div class="step active" data-decade="2020">
-          <div class="chapter-num">Chapter 3 · Precipitation</div>
-          <h2>Rainfall patterns become less stable.</h2>
+          <div class="chapter-num">Chapter 2 · Rainfall</div>
+          <h2>It's not just heat. Rain is changing too.</h2>
           <p>
-            Climate impacts are not limited to warming alone. Some regions experience
-            intensifying drought, while others face more extreme precipitation events.
+            Climate change rewrites where rain falls and when. Some regions are drying out —
+            threatening crops and drinking water. Others face floods more often. Neither is easy to live with.
           </p>
         </div>
         <div class="step" data-decade="2050">
-          <h2>Water stress intensifies.</h2>
+          <h2>Dry places get drier. Wet places get wetter.</h2>
           <p>
-            By mid-century, drought and flood risks begin separating geographically.
+            By the 2050s, the pattern becomes clearer. Already-dry regions in Africa, the
+            Middle East, and southern Europe face growing water scarcity. Tropical regions
+            swing between drought and extreme flooding.
           </p>
         </div>
         <div class="step" data-decade="2090" data-mode="precip-risk">
-          <h2>Equatorial rainfall intensification.</h2>
+          <h2>Near the equator, rainfall swings become extreme.</h2>
           <p>
-            By the 2090s, highlighted near-equator regions show strong positive precipitation anomalies.
-            Darker overlays mark areas with larger projected rainfall increases under SSP5-8.5.
+            By 2090, equatorial regions see some of the most dramatic changes. For countries
+            where most people depend on rain-fed agriculture, this threatens food security at a scale
+            that no adaptation plan can fully absorb.
           </p>
         </div>
       </div>
       <div class="sticky-graphic">
-        <div class="map-label">Precipitation Anomaly · <span id="ch3-decade">2020s</span></div>
+        <div class="map-label">Rainfall Change · <span id="ch3-decade">2020s</span></div>
         <svg id="ch3-svg" viewBox="0 0 960 500"></svg>
         <svg id="ch3-legend" width="360" height="42"></svg>
         <div id="ch3-precip-risk-legend" class="impact-legend precip-risk-legend">
-  <span class="precip-wet">Black = equatorial anomaly ≥ 25%</span>
-</div>
+          <span class="precip-wet">Black = rainfall increase ≥ 25% above baseline</span>
+        </div>
       </div>
     </section>
 
-
-
-    <!-- CHAPTER 3 EVIDENCE: CONTRIBUTION VS PRECIPITATION IMPACT -->
+    <!-- CHAPTER 2 EVIDENCE -->
     <section id="precip-impact-scatter-section" class="impact-scatter-section">
       <div class="scatter-copy">
-        <div class="chapter-num">Chapter 3 · Evidence</div>
-        <h2>Emissions contribution does not predict precipitation impact.</h2>
+        <div class="chapter-num">Chapter 2 · The data</div>
+        <h2>Countries that caused the least pollution face the worst rainfall disruption.</h2>
         <p>
-          Each dot is a country. The x-axis shows historical cumulative CO₂ contribution,
-          while the y-axis shows projected precipitation disruption by the 2090s.
-          The mismatch shows that climate impacts do not fall neatly on the countries
-          most responsible for emissions.
+          Each dot below is a country. The further right, the more CO₂ it has burned historically.
+          The further up or down, the more its rainfall is projected to change by the 2090s.
+          There is no clear pattern — the countries most responsible for emissions are not
+          the ones bearing the worst water stress.
         </p>
       </div>
       <div class="scatter-card">
@@ -143,42 +118,45 @@
       </div>
     </section>
 
-    <!-- CHAPTER 4: TEMPERATURE -->
+    <!-- CHAPTER 3: TEMPERATURE · BUT — who's actually getting hit hardest -->
     <section id="ch4" class="chapter ch4">
       <div class="chapter-text">
         <div class="step active" data-mode="base">
-          <div class="chapter-num">Chapter 4 · Temperature</div>
-          <h2>Climate impacts are unevenly distributed.</h2>
+          <div class="chapter-num">Chapter 3 · Temperature</div>
+          <h2>The places warming fastest are not the richest countries.</h2>
           <p>
-            Some of the countries facing the strongest projected warming contributed
-            relatively little to cumulative global emissions.
+            Look at the map. The deepest reds — the most extreme warming — fall over sub-Saharan Africa,
+            South Asia, and small island nations. These are places with the fewest resources
+            to adapt, and the least historical responsibility for the problem.
           </p>
         </div>
         <div class="step" data-mode="wetbulb">
-          <h2>Dangerous heat stress expands.</h2>
+          <h2>In some places, it will become dangerous just to go outside.</h2>
           <p>
-            Wet-bulb temperatures combine heat and humidity, creating conditions that
-            threaten human survivability.
+            Wet-bulb temperature measures heat combined with humidity. Above a certain threshold,
+            the human body cannot cool itself through sweat — even in the shade. Millions of people
+            in tropical regions will face these conditions for weeks at a time.
           </p>
         </div>
         <div class="step" data-mode="injustice">
-          <h2>Responsibility and vulnerability diverge.</h2>
+          <h2>The people least responsible are suffering the most.</h2>
           <p>
-            Major historical emitters are highlighted in gold, while highly impacted
-            countries are highlighted in violet.
+            Gold countries are the world's biggest historical emitters. Violet countries face
+            the highest climate impacts. They barely overlap.
           </p>
           <div class="callout injustice-callout">
-            <strong>4% vs 30%</strong>
-            Sub-Saharan Africa has contributed only about 4% of historical global emissions,
-            but faces roughly 30% of global climate-related damages in this narrative framing.
+            <strong>4% of the pollution. 30% of the damage.</strong>
+            Sub-Saharan Africa produced roughly 4% of historical global CO₂ emissions —
+            yet faces an estimated 30% of global climate-related harm.
           </div>
         </div>
       </div>
       <div class="sticky-graphic">
-        <div id="ch4-map-label" class="map-label">Temperature Anomaly · 2090s</div>
+        <div id="ch4-map-label" class="map-label">Temperature Change · 2090s</div>
+        <div class="map-scenario-note">Showing the worst-case emissions path (SSP5-8.5) — a future where the world takes no meaningful action to cut greenhouse gases</div>
         <svg id="ch4-svg" viewBox="0 0 960 500"></svg>
         <svg id="ch4-legend" width="360" height="42"></svg>
-        <div id="ch4-wb-legend" class="impact-legend">Yellow/orange/pink = increasing wet-bulb heat risk</div>
+        <div id="ch4-wb-legend" class="impact-legend">Yellow → orange → pink = growing danger from combined heat and humidity</div>
         <div id="ch4-injustice-legend" class="impact-legend">
           <span class="major-emitter">Major historical emitters</span>
           <span class="most-affected">Highly impacted countries</span>
@@ -186,17 +164,15 @@
       </div>
     </section>
 
-
-
-    <!-- CHAPTER 4 EVIDENCE: CONTRIBUTION VS TEMPERATURE IMPACT -->
+    <!-- CHAPTER 3 EVIDENCE -->
     <section id="temperature-impact-scatter-section" class="impact-scatter-section">
       <div class="scatter-copy">
-        <div class="chapter-num">Chapter 4 · Evidence</div>
-        <h2>Responsibility and warming burden remain mismatched.</h2>
+        <div class="chapter-num">Chapter 3 · The data</div>
+        <h2>The countries that burned the most fossil fuels are not the ones getting the hottest.</h2>
         <p>
-          Countries with smaller cumulative emissions can still face severe projected
-          temperature increases. This scatterplot makes the climate injustice argument
-          visible outside the map: contribution and impact are not strongly aligned.
+          Each dot is a country. High historical emissions do not predict high future warming.
+          Many of the dots facing the worst projected temperatures sit near zero on the emissions axis —
+          they barely contributed to the problem, but they are paying the price.
         </p>
       </div>
       <div class="scatter-card">
@@ -205,22 +181,84 @@
       </div>
     </section>
 
-    <!-- CHAPTER 5: YOUR WORLD -->
+    <!-- CHAPTER 4: EMISSIONS · BUT — here is who caused it -->
+    <section id="emissions-chapter" class="standard-chapter emissions-chapter">
+      <div class="chapter-heading">
+        <div class="chapter-num">Chapter 4 · Emissions</div>
+        <h2>So who actually caused this?</h2>
+        <p>
+          Centuries of burning coal, oil, and gas by a handful of wealthy nations built up
+          the CO₂ that is now warming the entire planet. This is not an accusation — it is
+          the historical record. The same countries now have the most resources to act.
+        </p>
+      </div>
+
+      <section id="emissions-comparison-section">
+        <h3>Who has emitted the most CO₂ — historically and today?</h3>
+        <div id="emissions-map"></div>
+        <div class="emissions-grid">
+          <div>
+            <h4>Biggest historical emitters (all time)</h4>
+            <div id="historical-emissions-chart"></div>
+          </div>
+          <div>
+            <h4>Biggest emitters today</h4>
+            <div id="present-emissions-chart"></div>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <!-- CHAPTER 5: SCENARIOS · THEREFORE — the future is a choice -->
+    <section id="scenarios-chapter" class="standard-chapter scenarios-chapter">
+      <div class="chapter-heading">
+        <div class="chapter-num">Chapter 5 · The Future</div>
+        <h2>The future is not fixed. It depends on what we choose.</h2>
+        <p>
+          Scientists model three different futures based on how much the world reduces emissions.
+          The gap between the best and worst case is nearly 3°C of extra warming by 2100 —
+          the difference between a difficult future and a catastrophic one.
+        </p>
+      </div>
+      <div class="scenarios-grid">
+        <div class="scenario-card scenario-best">
+          <div class="scen-label">Best case · <span class="scen-code">SSP1-2.6</span></div>
+          <div class="scen-name">Strong global action</div>
+          <div class="scen-temp">~+1.8°C by 2100</div>
+          <p>Countries cut emissions sharply this decade, switch to clean energy, and reach net-zero around 2050. Warming stays close to the Paris Agreement target. Hard, but possible.</p>
+        </div>
+        <div class="scenario-card scenario-mid">
+          <div class="scen-label">Middle road · <span class="scen-code">SSP2-4.5</span></div>
+          <div class="scen-name">Partial action</div>
+          <div class="scen-temp">~+2.7°C by 2100</div>
+          <p>Some climate policies take effect but fossil fuels phase out slowly. Warming exceeds 2°C. Most regions face significant disruption — but some of the worst outcomes are avoided.</p>
+        </div>
+        <div class="scenario-card scenario-worst">
+          <div class="scen-label">Worst case · <span class="scen-code">SSP5-8.5</span></div>
+          <div class="scen-name">No meaningful action</div>
+          <div class="scen-temp">~+4.4°C by 2100</div>
+          <p>Fossil fuel use keeps expanding. Emissions roughly double by 2100. Extreme heat, flooding, and ecosystem collapse become widespread. The world your children inherit looks nothing like today's.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CHAPTER 6: YOUR WORLD · THEREFORE — make it personal -->
     <section id="ch6" class="chapter ch6">
       <div class="chapter-text">
         <div class="step active">
-          <div class="chapter-num">Chapter 5 · Your World</div>
-          <h2>Select your country.</h2>
+          <div class="chapter-num">Chapter 6 · Your Country</div>
+          <h2>Everything you've seen so far is global. Now make it personal.</h2>
           <p>
-            Click any country to compare projected warming trajectories under different
-            emissions scenarios and see a climate burden profile.
+            Click your country on the map. You'll see how much it is projected to warm,
+            how rainfall will change, and how much it contributed to the problem.
+            The numbers will tell you clearly: who bears the burden, and who caused it.
           </p>
         </div>
       </div>
       <div class="country-impact-layout">
         <svg id="ch6-svg" viewBox="0 0 960 500"></svg>
         <div class="country-panel">
-          <p id="country-placeholder">Click a country to explore its projected climate burden profile.</p>
+          <p id="country-placeholder">Click any country to see its climate future.</p>
           <div id="country-detail" style="display:none;">
             <h3 id="country-name"></h3>
             <p id="country-sub"></p>
@@ -231,36 +269,58 @@
       </div>
     </section>
 
-    <!-- CHAPTER 6: EXPLORATION -->
+    <!-- CHAPTER 7: EXPLORATION -->
     <section id="explorer" class="standard-chapter exploration-chapter">
       <div class="chapter-heading">
-        <div class="chapter-num">Chapter 6 · Exploration</div>
-        <h2>Explore Future Climate Scenarios</h2>
+        <div class="chapter-num">Chapter 7 · Explore the Data</div>
+        <h2>Dig deeper. Explore any scenario, variable, or region.</h2>
         <p>
-          Compare climate trajectories across variables, decades, regions, and emissions scenarios.
+          The story above shows the big picture. Now explore it yourself — compare any two decades,
+          switch between temperature, rainfall, and sea ice, and brush any region on the map
+          to pull out its trend line.
         </p>
       </div>
 
       <div class="explorer-controls">
-        <div id="scenario-toggle">
-          <button data-scen="ssp126">SSP1-2.6</button>
-          <button data-scen="ssp245" class="active">SSP2-4.5</button>
-          <button data-scen="ssp585">SSP5-8.5</button>
+
+        <div class="explorer-control-group">
+          <div class="explorer-control-label">Emissions scenario</div>
+          <div id="scenario-toggle">
+            <button data-scen="ssp126">Best case <span class="btn-code">SSP1-2.6</span></button>
+            <button data-scen="ssp245" class="active">Middle road <span class="btn-code">SSP2-4.5</span></button>
+            <button data-scen="ssp585">Worst case <span class="btn-code">SSP5-8.5</span></button>
+          </div>
+          <div class="explorer-explainers" id="scenario-explainer-box">
+            <div class="explorer-explainer" data-scen="ssp126"><strong>Best case (SSP1-2.6):</strong> The world acts fast — clean energy, net-zero by ~2050. Warming stays near 1.5–2°C.</div>
+            <div class="explorer-explainer active" data-scen="ssp245"><strong>Middle road (SSP2-4.5):</strong> Some action, slow progress. Fossil fuels phase out gradually. Warming reaches ~2.7°C.</div>
+            <div class="explorer-explainer" data-scen="ssp585"><strong>Worst case (SSP5-8.5):</strong> No meaningful action. Emissions keep rising. Warming reaches ~4.4°C — catastrophic for most of the planet.</div>
+          </div>
         </div>
-        <label>Variable:
+
+        <div class="explorer-control-group">
+          <div class="explorer-control-label">What to show on the map</div>
           <select id="feature-select">
-            <option value="tas">Temperature anomaly</option>
-            <option value="pr">Precipitation anomaly</option>
-            <option value="siconc">Sea ice concentration</option>
+            <option value="tas">🌡 Temperature change</option>
+            <option value="pr">🌧 Rainfall change</option>
+            <option value="siconc">🧊 Sea ice coverage</option>
           </select>
-        </label>
-        <button id="play-btn">▶ Play</button>
-        <button id="clear-region" style="display:none;">Clear regions</button>
+          <div class="explorer-explainers" id="variable-explainer-box">
+            <div class="explorer-explainer active" data-feat="tas"><strong>Temperature change:</strong> How many degrees warmer (red) or cooler (blue) a region is compared to pre-industrial times (before 1900). Most of the map turns red.</div>
+            <div class="explorer-explainer" data-feat="pr"><strong>Rainfall change:</strong> How much wetter (teal/blue) or drier (brown) a region gets compared to pre-industrial rainfall. Dry places tend to get drier; wet places wetter.</div>
+            <div class="explorer-explainer" data-feat="siconc"><strong>Sea ice coverage:</strong> The percentage of ocean covered by ice. Dark blue = mostly ice. As the planet warms, these areas shrink dramatically, especially in the Arctic.</div>
+          </div>
+        </div>
+
+        <div class="explorer-control-group explorer-control-actions">
+          <button id="play-btn">▶ Animate decades</button>
+          <button id="clear-region" style="display:none;">Clear selected regions</button>
+        </div>
+
       </div>
 
       <div class="map-info">
-        <h3 id="map-title">Temperature anomaly maps</h3>
-        <p id="map-subtitle">Δ°C vs 1850–1900</p>
+        <h3 id="map-title">Temperature change maps</h3>
+        <p id="map-subtitle">Degrees warmer or cooler vs. pre-industrial baseline (before 1900)</p>
         <span id="year-readout">2050s vs 2090s</span>
       </div>
 
