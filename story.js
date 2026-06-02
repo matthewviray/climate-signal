@@ -12,10 +12,6 @@ const INJUSTICE_COLORS = {
 };
 
 // Chapter 3 equatorial precipitation-risk overlay colors.
-const PRECIP_RISK_COLORS = {
-  dry: '#0b0b0b', // red/orange = much drier
-  wet: '#0b0b0b'  // blue = much wetter
-};
 
 const SCALES = {
   tas:    { domain: [-2, 8],    interp: d3.interpolateRdBu,  reverse: true,  label: 'Δ°C',     fmt: d => d3.format('+.1f')(d) + '°C' },
@@ -38,7 +34,7 @@ let EMISSIONS_COUNTRIES = [];
 let EMISSIONS_BY_KEY = new Map();
 
 const ISO_NAMES = {
-  4:"Afghanistan",8:"Albania",12:"Algeria",16:"American Samoa",20:"Andorra",24:"Angola",660:"Anguilla",28:"Antigua and Barbuda",32:"Argentina",51:"Armenia",533:"Aruba",36:"Australia",40:"Austria",31:"Azerbaijan",44:"Bahamas",48:"Bahrain",50:"Bangladesh",52:"Barbados",112:"Belarus",56:"Belgium",84:"Belize",204:"Benin",60:"Bermuda",64:"Bhutan",68:"Bolivia",70:"Bosnia and Herzegovina",72:"Botswana",76:"Brazil",96:"Brunei",100:"Bulgaria",854:"Burkina Faso",108:"Burundi",132:"Cabo Verde",116:"Cambodia",120:"Cameroon",124:"Canada",136:"Cayman Islands",140:"Central African Rep.",148:"Chad",152:"Chile",156:"China",170:"Colombia",174:"Comoros",180:"Dem. Rep. Congo",178:"Rep. of Congo",188:"Costa Rica",384:"Côte d'Ivoire",191:"Croatia",192:"Cuba",196:"Cyprus",203:"Czechia",208:"Denmark",262:"Djibouti",212:"Dominica",214:"Dominican Republic",218:"Ecuador",818:"Egypt",222:"El Salvador",226:"Equatorial Guinea",232:"Eritrea",233:"Estonia",748:"Eswatini",231:"Ethiopia",238:"Falkland Islands",242:"Fiji",246:"Finland",250:"France",266:"Gabon",270:"Gambia",268:"Georgia",276:"Germany",288:"Ghana",300:"Greece",304:"Greenland",308:"Grenada",320:"Guatemala",324:"Guinea",624:"Guinea-Bissau",328:"Guyana",332:"Haiti",340:"Honduras",348:"Hungary",352:"Iceland",356:"India",360:"Indonesia",364:"Iran",368:"Iraq",372:"Ireland",376:"Israel",380:"Italy",388:"Jamaica",392:"Japan",400:"Jordan",398:"Kazakhstan",404:"Kenya",408:"North Korea",410:"South Korea",414:"Kuwait",417:"Kyrgyzstan",418:"Laos",428:"Latvia",422:"Lebanon",426:"Lesotho",430:"Liberia",434:"Libya",440:"Lithuania",442:"Luxembourg",450:"Madagascar",454:"Malawi",458:"Malaysia",462:"Maldives",466:"Mali",470:"Malta",478:"Mauritania",480:"Mauritius",484:"Mexico",496:"Mongolia",499:"Montenegro",504:"Morocco",508:"Mozambique",516:"Namibia",524:"Nepal",528:"Netherlands",554:"New Zealand",558:"Nicaragua",562:"Niger",566:"Nigeria",578:"Norway",512:"Oman",586:"Pakistan",591:"Panama",598:"Papua New Guinea",600:"Paraguay",604:"Peru",608:"Philippines",616:"Poland",620:"Portugal",634:"Qatar",642:"Romania",643:"Russia",646:"Rwanda",682:"Saudi Arabia",686:"Senegal",688:"Serbia",694:"Sierra Leone",703:"Slovakia",705:"Slovenia",706:"Somalia",710:"South Africa",728:"South Sudan",724:"Spain",144:"Sri Lanka",729:"Sudan",740:"Suriname",752:"Sweden",756:"Switzerland",760:"Syria",762:"Tajikistan",834:"Tanzania",764:"Thailand",768:"Togo",780:"Trinidad and Tobago",788:"Tunisia",792:"Turkey",795:"Turkmenistan",800:"Uganda",804:"Ukraine",784:"UAE",826:"United Kingdom",840:"United States",858:"Uruguay",860:"Uzbekistan",548:"Vanuatu",862:"Venezuela",704:"Vietnam",887:"Yemen",894:"Zambia",716:"Zimbabwe"
+  10:"Antarctica",4:"Afghanistan",8:"Albania",12:"Algeria",16:"American Samoa",20:"Andorra",24:"Angola",660:"Anguilla",28:"Antigua and Barbuda",32:"Argentina",51:"Armenia",533:"Aruba",36:"Australia",40:"Austria",31:"Azerbaijan",44:"Bahamas",48:"Bahrain",50:"Bangladesh",52:"Barbados",112:"Belarus",56:"Belgium",84:"Belize",204:"Benin",60:"Bermuda",64:"Bhutan",68:"Bolivia",70:"Bosnia and Herzegovina",72:"Botswana",76:"Brazil",96:"Brunei",100:"Bulgaria",854:"Burkina Faso",108:"Burundi",132:"Cabo Verde",116:"Cambodia",120:"Cameroon",124:"Canada",136:"Cayman Islands",140:"Central African Rep.",148:"Chad",152:"Chile",156:"China",170:"Colombia",174:"Comoros",180:"Dem. Rep. Congo",178:"Rep. of Congo",188:"Costa Rica",384:"Côte d'Ivoire",191:"Croatia",192:"Cuba",196:"Cyprus",203:"Czechia",208:"Denmark",262:"Djibouti",212:"Dominica",214:"Dominican Republic",218:"Ecuador",818:"Egypt",222:"El Salvador",226:"Equatorial Guinea",232:"Eritrea",233:"Estonia",748:"Eswatini",231:"Ethiopia",238:"Falkland Islands",242:"Fiji",246:"Finland",250:"France",266:"Gabon",270:"Gambia",268:"Georgia",276:"Germany",288:"Ghana",300:"Greece",304:"Greenland",308:"Grenada",320:"Guatemala",324:"Guinea",624:"Guinea-Bissau",328:"Guyana",332:"Haiti",340:"Honduras",348:"Hungary",352:"Iceland",356:"India",360:"Indonesia",364:"Iran",368:"Iraq",372:"Ireland",376:"Israel",380:"Italy",388:"Jamaica",392:"Japan",400:"Jordan",398:"Kazakhstan",404:"Kenya",408:"North Korea",410:"South Korea",414:"Kuwait",417:"Kyrgyzstan",418:"Laos",428:"Latvia",422:"Lebanon",426:"Lesotho",430:"Liberia",434:"Libya",440:"Lithuania",442:"Luxembourg",450:"Madagascar",454:"Malawi",458:"Malaysia",462:"Maldives",466:"Mali",470:"Malta",478:"Mauritania",480:"Mauritius",484:"Mexico",496:"Mongolia",499:"Montenegro",504:"Morocco",508:"Mozambique",516:"Namibia",524:"Nepal",528:"Netherlands",554:"New Zealand",558:"Nicaragua",562:"Niger",566:"Nigeria",578:"Norway",512:"Oman",586:"Pakistan",591:"Panama",598:"Papua New Guinea",600:"Paraguay",604:"Peru",608:"Philippines",616:"Poland",620:"Portugal",634:"Qatar",642:"Romania",643:"Russia",646:"Rwanda",682:"Saudi Arabia",686:"Senegal",688:"Serbia",694:"Sierra Leone",703:"Slovakia",705:"Slovenia",706:"Somalia",710:"South Africa",728:"South Sudan",724:"Spain",144:"Sri Lanka",729:"Sudan",740:"Suriname",752:"Sweden",756:"Switzerland",760:"Syria",762:"Tajikistan",834:"Tanzania",764:"Thailand",768:"Togo",780:"Trinidad and Tobago",788:"Tunisia",792:"Turkey",795:"Turkmenistan",800:"Uganda",804:"Ukraine",784:"UAE",826:"United Kingdom",840:"United States",858:"Uruguay",860:"Uzbekistan",548:"Vanuatu",862:"Venezuela",704:"Vietnam",887:"Yemen",894:"Zambia",716:"Zimbabwe"
 };
 
 // ISO 3166-1 numeric codes for the largest historical cumulative CO₂ emitters
@@ -502,7 +498,7 @@ function renderToCanvas(canvas, field, feature) {
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, MAP_W, MAP_H);
   ctx.globalAlpha = 0.94;
-  ctx.lineWidth = 0.6;
+  ctx.lineWidth = 1.2;
   const isIce = feature === 'siconc';
   const hw = DLON / 2, hh = DLAT / 2;
   for (let i = 0; i < N_LAT; i++) {
@@ -816,22 +812,8 @@ function initCh3PrecipRisk() {
   precipLayer.selectAll('*').remove();
 
   const zones = [
-    {
-      cls: 'precip-dry',
-      label: 'Much drier',
-      latLim: 25,
-      test: v => v <= -25,
-      fill: PRECIP_RISK_COLORS.dry,
-      op: 0.72
-    },
-    {
-      cls: 'precip-wet',
-      label: 'Much wetter',
-      latLim: 25,
-      test: v => v >= 25,
-      fill: PRECIP_RISK_COLORS.wet,
-      op: 0.72
-    }
+    { cls: 'precip-dry', label: 'Much drier', latLim: 25, test: v => v <= -25 },
+    { cls: 'precip-wet', label: 'Much wetter', latLim: 25, test: v => v >= 25  }
   ];
 
   zones.forEach(z => {
@@ -852,9 +834,9 @@ function initCh3PrecipRisk() {
       .attr('y', d => d.y)
       .attr('width', d => Math.max(0.5, d.w + 0.5))
       .attr('height', d => Math.max(0.5, d.h + 0.5))
-      .attr('fill', z.fill)
-      .attr('fill-opacity', z.op)
-      .attr('stroke', 'rgba(255,255,255,0.55)')
+      .attr('fill', d => colorFor(field[d.i][d.j], 'pr'))
+      .attr('fill-opacity', 1)
+      .attr('stroke', d => colorFor(field[d.i][d.j], 'pr'))
       .attr('stroke-width', 0.25)
       .attr('pointer-events', 'none');
   });
@@ -1099,6 +1081,7 @@ function drawCountryLine({hist, s126, s245, s585}) {
   const cSvg = d3.select('#country-line-svg');
   cSvg.selectAll('*').remove();
   const W=400, H=220, m={top:16,right:80,bottom:32,left:46};
+  cSvg.attr('viewBox', `0 0 ${W} ${H}`);
   const pw=W-m.left-m.right, ph=H-m.top-m.bottom;
   const g = cSvg.append('g').attr('transform',`translate(${m.left},${m.top})`);
   const all = [...hist,...s126,...s245,...s585];
