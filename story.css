@@ -67,6 +67,93 @@ select {
   font: inherit;
 }
 
+/* ── LANDING OVERLAY ──────────────────────────────────────────────────────── */
+#landing {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: #080808;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: pointer;
+  transition: opacity 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#landing.fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#globe-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.landing-content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  animation: landing-fade-in 1.4s ease forwards;
+}
+
+@keyframes landing-fade-in {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.landing-eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: var(--accent);
+  opacity: 0;
+  animation: landing-fade-in 1s 0.4s ease forwards;
+}
+
+.landing-title {
+  font-family: var(--serif);
+  font-size: clamp(52px, 9vw, 120px);
+  font-weight: 300;
+  letter-spacing: -0.04em;
+  line-height: 1.0;
+  color: var(--ink);
+  opacity: 0;
+  animation: landing-fade-in 1s 0.7s ease forwards;
+}
+
+.landing-sub {
+  font-size: clamp(14px, 1.6vw, 18px);
+  color: var(--ink-soft);
+  max-width: 480px;
+  line-height: 1.6;
+  opacity: 0;
+  animation: landing-fade-in 1s 1.1s ease forwards;
+}
+
+.landing-cta {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: .1em;
+  color: var(--ink-faint);
+  margin-top: 12px;
+  opacity: 0;
+  animation: landing-fade-in 1s 1.6s ease forwards, landing-bob 2.4s 2.6s ease-in-out infinite;
+}
+
+@keyframes landing-bob {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(6px); }
+}
+
 /* ── INTRO / EMISSIONS ─────────────────────────────────────────────────────── */
 .intro-panel {
   min-height: 88vh;
@@ -997,6 +1084,16 @@ select {
   margin-bottom: 6px;
 }
 
+.injustice-callout--secondary {
+  background: linear-gradient(135deg, rgba(74,158,202,.08), rgba(74,158,202,.03));
+  border-left-color: var(--accent2);
+}
+
+.injustice-callout--secondary strong {
+  font-size: 15px;
+  color: var(--accent2);
+}
+
 @media (max-width: 900px) {
   .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1033,6 +1130,46 @@ select {
 .ch2 .chapter-num { color: var(--ch2); }
 .emissions-chapter .chapter-num { color: var(--accent); }
 .scenarios-chapter .chapter-num { color: var(--scen-126); }
+.takeaways-chapter .eyebrow { color: var(--ch4); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 10px; }
+
+.takeaways-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin-top: 40px;
+}
+
+.takeaway-card {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 28px 32px;
+}
+
+.takeaway-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 12px;
+  letter-spacing: .08em;
+}
+
+.takeaway-card h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  line-height: 1.3;
+}
+
+.takeaway-card p {
+  font-size: 15px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+@media (max-width: 700px) {
+  .takeaways-grid { grid-template-columns: 1fr; }
+}
 .ch3 .chapter-num { color: var(--ch3); }
 .ch4 .chapter-num { color: var(--ch4); }
 .ch6 .chapter-num { color: var(--ch6); }

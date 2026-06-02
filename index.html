@@ -12,6 +12,18 @@
   <link rel="stylesheet" href="story.css">
 </head>
 <body>
+
+  <!-- LANDING OVERLAY -->
+  <div id="landing">
+    <canvas id="globe-canvas"></canvas>
+    <div class="landing-content">
+      <div class="landing-eyebrow">A data story</div>
+      <h1 class="landing-title">Climate<br>Inequality</h1>
+      <p class="landing-sub">The planet is warming unevenly.<br>Those least responsible bear the most.</p>
+      <div class="landing-cta">Scroll or click to explore ↓</div>
+    </div>
+  </div>
+
   <main class="container">
 
     <!-- INTRO / INFOGRAPHIC: not numbered as a chapter -->
@@ -149,6 +161,11 @@
             Sub-Saharan Africa produced roughly 4% of historical global CO₂ emissions —
             yet faces an estimated 30% of global climate-related harm.
           </div>
+          <div class="callout injustice-callout injustice-callout--secondary">
+            <strong>Major emitters will also warm significantly</strong> — but with the wealth
+            and infrastructure to adapt. The injustice isn't that rich nations escape consequences.
+            It's that the nations least able to cope are bearing the most.
+          </div>
         </div>
       </div>
       <div class="sticky-graphic">
@@ -265,6 +282,36 @@
             <svg id="country-line-svg" width="400" height="220"></svg>
             <div id="country-climate-summary"></div>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAKEAWAYS -->
+    <section id="takeaways" class="standard-chapter takeaways-chapter">
+      <div class="chapter-heading">
+        <div class="eyebrow">Key takeaways</div>
+        <h2>What the data tells us.</h2>
+      </div>
+      <div class="takeaways-grid">
+        <div class="takeaway-card">
+          <div class="takeaway-num">01</div>
+          <h3>The Arctic is already gone — in slow motion.</h3>
+          <p>Sea ice that took millennia to form is disappearing within a single lifetime. Under a high-emissions path, the Arctic becomes an open ocean in summer before 2100.</p>
+        </div>
+        <div class="takeaway-card">
+          <div class="takeaway-num">02</div>
+          <h3>Rain is becoming unreliable for billions.</h3>
+          <p>Dry regions are getting drier. Wet regions face more extreme floods. For the hundreds of millions who depend on rain-fed agriculture, this is an existential threat — not a weather inconvenience.</p>
+        </div>
+        <div class="takeaway-card">
+          <div class="takeaway-num">03</div>
+          <h3>The burden falls on those least responsible.</h3>
+          <p>Sub-Saharan Africa produced roughly 4% of historical CO₂ emissions yet faces an estimated 30% of global climate-related harm. The countries warming fastest are not the ones that caused it.</p>
+        </div>
+        <div class="takeaway-card">
+          <div class="takeaway-num">04</div>
+          <h3>The future is still a choice.</h3>
+          <p>Nearly 3°C separates the best- and worst-case scenarios by 2100. That gap is determined entirely by decisions being made right now — about energy, policy, and who gets to decide.</p>
         </div>
       </div>
     </section>

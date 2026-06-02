@@ -68,6 +68,8 @@ const MAJOR_EMITTER_IDS = new Set([
 const EMISSIONS_PATH = "data/owid-co2-data.csv";
 const CMIP6_PATH = "data/cmip6_data.json";
 
+initLanding();
+
 Promise.all([
   d3.csv(EMISSIONS_PATH),
   d3.json(CMIP6_PATH),
@@ -914,20 +916,20 @@ function initCh4Countries() {
       .attr('d', pathGen)
       .attr('fill', d => {
         const id = parseInt(d.id);
-        if (mostAffectedIds.has(id)) return INJUSTICE_COLORS.impactedFill;
         if (MAJOR_EMITTER_IDS.has(id)) return INJUSTICE_COLORS.emitterFill;
+        if (mostAffectedIds.has(id)) return INJUSTICE_COLORS.impactedFill;
         return 'none';
       })
       .attr('fill-opacity', d => {
         const id = parseInt(d.id);
-        if (mostAffectedIds.has(id)) return 0.50;
         if (MAJOR_EMITTER_IDS.has(id)) return 0.42;
+        if (mostAffectedIds.has(id)) return 0.50;
         return 0;
       })
       .attr('stroke', d => {
         const id = parseInt(d.id);
-        if (mostAffectedIds.has(id)) return INJUSTICE_COLORS.impactedStroke;
         if (MAJOR_EMITTER_IDS.has(id)) return INJUSTICE_COLORS.emitterStroke;
+        if (mostAffectedIds.has(id)) return INJUSTICE_COLORS.impactedStroke;
         return 'none';
       })
       .attr('stroke-width', d => {
@@ -1741,4 +1743,101 @@ function drawImpactScatter(sel, noteSel, metric) {
 function initImpactScatterplots() {
   drawImpactScatter('#precip-impact-scatter', '#precip-impact-note', 'pr');
   drawImpactScatter('#temperature-impact-scatter', '#temperature-impact-note', 'tas');
+}
+
+
+// ── LANDING GLOBE ─────────────────────────────────────────────────────────────
+function initLanding() {
+  const landing = document.getElementById('landing');
+  const canvas  = document.getElementById('globe-canvas');
+  const ctx     = canvas.getContext('2d');
+
+  let world = null;
+  let land  = null;
+  let raf   = null;
+  let rotation = 0;
+  let dismissed = false;
+
+  function dismiss() {
+    if (dismissed) return;
+    dismissed = true;
+    landing.classList.add('fade-out');
+    setTimeout(() => { landing.style.display = 'none'; }, 950);
+    cancelAnimationFrame(raf);
+  }
+
+  landing.addEventListener('click', dismiss);
+  window.addEventListener('scroll', dismiss, { once: true });
+
+  function resize() {
+    canvas.width  = window.innerWidth  * devicePixelRatio;
+    canvas.height = window.innerHeight * devicePixelRatio;
+    canvas.style.width  = window.innerWidth  + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function draw() {
+    if (dismissed) return;
+    const W = canvas.width, H = canvas.height;
+    const R = Math.min(W, H) * 0.36;
+
+    ctx.clearRect(0, 0, W, H);
+
+    const proj = d3.geoOrthographic()
+      .scale(R)
+      .translate([W / 2, H / 2])
+      .rotate([rotation, -20, 0])
+      .clipAngle(90);
+
+    const path = d3.geoPath(proj, ctx);
+
+    // ocean fill
+    ctx.beginPath();
+    path({ type: 'Sphere' });
+    ctx.fillStyle = '#0d1620';
+    ctx.fill();
+
+    // subtle graticule
+    ctx.beginPath();
+    path(d3.geoGraticule()());
+    ctx.strokeStyle = 'rgba(74,158,202,0.07)';
+    ctx.lineWidth = 0.6 * devicePixelRatio;
+    ctx.stroke();
+
+    if (land) {
+      // land fill — glow effect: draw slightly scaled out first
+      ctx.beginPath();
+      path(land);
+      ctx.fillStyle = 'rgba(74,158,202,0.12)';
+      ctx.fill();
+
+      // land outline
+      ctx.beginPath();
+      path(land);
+      ctx.fillStyle = '#1a2e3f';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(74,158,202,0.55)';
+      ctx.lineWidth = 0.8 * devicePixelRatio;
+      ctx.stroke();
+    }
+
+    // sphere border glow
+    ctx.beginPath();
+    path({ type: 'Sphere' });
+    ctx.strokeStyle = 'rgba(74,158,202,0.25)';
+    ctx.lineWidth = 1.5 * devicePixelRatio;
+    ctx.stroke();
+
+    rotation += 0.18;
+    raf = requestAnimationFrame(draw);
+  }
+
+  // Start spinning immediately with a placeholder sphere while atlas loads
+  draw();
+
+  d3.json('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json').then(w => {
+    land = topojson.feature(w, w.objects.land);
+  });
 }
