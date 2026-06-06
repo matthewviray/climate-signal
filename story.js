@@ -940,20 +940,55 @@ function initForkMaps() {
 // ── CH6 COUNTRY CLICK ─────────────────────────────────────────────────────────
 function initCh6() {
   const svg = initBaseSvg('#ch6-svg', {clickable:true});
+  const countryStyle = {
+    idle: { fill:'rgba(255,255,255,0.03)', stroke:'rgba(255,255,255,.22)', strokeWidth:.5 },
+    hover: { fill:'rgba(123,108,240,0.22)', stroke:'rgba(255,255,255,.5)', strokeWidth:.8 },
+    selected: { fill:'rgba(123,108,240,0.34)', stroke:'#d8d2ff', strokeWidth:1.35 }
+  };
+  let selectedCountryId = null;
+  let hoveredCountryId = null;
+
+  function updateCountryStyles() {
+    svg.selectAll('.country-path')
+      .attr('fill', d => {
+        const id = parseInt(d.id);
+        if (id === selectedCountryId) return countryStyle.selected.fill;
+        if (id === hoveredCountryId) return countryStyle.hover.fill;
+        return countryStyle.idle.fill;
+      })
+      .attr('stroke', d => {
+        const id = parseInt(d.id);
+        if (id === selectedCountryId) return countryStyle.selected.stroke;
+        if (id === hoveredCountryId) return countryStyle.hover.stroke;
+        return countryStyle.idle.stroke;
+      })
+      .attr('stroke-width', d => {
+        const id = parseInt(d.id);
+        if (id === selectedCountryId) return countryStyle.selected.strokeWidth;
+        if (id === hoveredCountryId) return countryStyle.hover.strokeWidth;
+        return countryStyle.idle.strokeWidth;
+      });
+  }
+
   svg.select('.countries-click-layer').selectAll('path.country-path')
     .data(COUNTRIES_GEO.features).join('path')
     .attr('class','country-path').attr('d',pathGen)
-    .attr('fill','rgba(255,255,255,0.03)')
-    .attr('stroke','rgba(255,255,255,.22)').attr('stroke-width',.5)
+    .attr('fill',countryStyle.idle.fill)
+    .attr('stroke',countryStyle.idle.stroke).attr('stroke-width',countryStyle.idle.strokeWidth)
     .style('cursor','pointer')
     .on('mouseenter', function(e,d) {
-      d3.select(this).attr('fill','rgba(123,108,240,0.22)');
+      hoveredCountryId = parseInt(d.id);
+      updateCountryStyles();
       showTip(e, `<strong>${ISO_NAMES[parseInt(d.id)] || 'Country'}</strong>`);
     })
-    .on('mouseleave', function() { d3.select(this).attr('fill','rgba(255,255,255,0.03)'); hideTip(); })
+    .on('mouseleave', function() {
+      hoveredCountryId = null;
+      updateCountryStyles();
+      hideTip();
+    })
     .on('click', function(e,d) {
-      svg.selectAll('.country-path').attr('fill','rgba(255,255,255,0.03)');
-      d3.select(this).attr('fill','rgba(123,108,240,0.32)');
+      selectedCountryId = parseInt(d.id);
+      updateCountryStyles();
       showCountryDetail(d);
     });
 }
@@ -1203,10 +1238,114 @@ function initExplorer() {
   const PW=LINE_W-MARGIN.left-MARGIN.right, PH=LINE_H-MARGIN.top-MARGIN.bottom;
 
   const FEAT_META = {
-    tas:    { title:'Temperature anomaly maps', sub:'Δ°C vs 1850–1900', notes:'<strong>Temperature anomaly.</strong> Red = warming above pre-industrial baseline. Brush the line chart or press Play to animate; drag boxes on maps to compare regions.' },
+    tas:    { title:'Temperature anomaly maps', sub:'Δ°C vs 1850–1900', notes:'<strong>Temperature anomaly.</strong> Red = warming above pre-industrial baseline. Brush the line chart or press Play to animate; draw regions on maps to compare them.' },
     pr:     { title:'Precipitation anomaly maps', sub:'Δ% vs baseline', notes:'<strong>Precipitation anomaly.</strong> Teal = wetter, brown = drier than 1850–1900 average.' },
-    siconc: { title:'Sea ice concentration maps', sub:'% ocean coverage', notes:'<strong>Sea ice concentration.</strong> Blue = ice-covered ocean. Region brushing disabled for sea ice.' }
+    siconc: { title:'Sea ice concentration maps', sub:'% ocean coverage', notes:'<strong>Sea ice concentration.</strong> Blue = ice-covered ocean. Region selection disabled for sea ice.' }
   };
+
+  const LASSO_MIN_DIST2 = 9;
+  const LASSO_MIN_AREA = 24;
+
+  function pointDistance2(a, b) {
+    const dx = a[0] - b[0], dy = a[1] - b[1];
+    return dx * dx + dy * dy;
+  }
+
+  function clampMapPoint(p) {
+    return [
+      Math.max(0, Math.min(MAP_W, p[0])),
+      Math.max(0, Math.min(MAP_H, p[1]))
+    ];
+  }
+
+  function pathFromPoints(points, close = false) {
+    if (!points.length) return '';
+    return `M${points.map(p => `${p[0]},${p[1]}`).join('L')}${close ? 'Z' : ''}`;
+  }
+
+  function polygonBounds(points) {
+    const xs = points.map(p => p[0]), ys = points.map(p => p[1]);
+    return {
+      x0: Math.min(...xs),
+      x1: Math.max(...xs),
+      y0: Math.min(...ys),
+      y1: Math.max(...ys)
+    };
+  }
+
+  function cross2(a, b) {
+    return a[0] * b[1] - a[1] * b[0];
+  }
+
+  function segmentIntersection(a, b, c, d) {
+    const r = [b[0] - a[0], b[1] - a[1]];
+    const s = [d[0] - c[0], d[1] - c[1]];
+    const denom = cross2(r, s);
+    if (Math.abs(denom) < 1e-7) return null;
+
+    const qp = [c[0] - a[0], c[1] - a[1]];
+    const t = cross2(qp, s) / denom;
+    const u = cross2(qp, r) / denom;
+    const eps = 1e-4;
+    if (t <= eps || t >= 1 - eps || u <= eps || u >= 1 - eps) return null;
+
+    return {
+      point: [a[0] + t * r[0], a[1] + t * r[1]],
+      t,
+      u
+    };
+  }
+
+  function firstSelfIntersectionLoop(points) {
+    for (let i = 3; i < points.length; i++) {
+      let best = null;
+      for (let j = 0; j < i - 2; j++) {
+        const hit = segmentIntersection(points[j], points[j + 1], points[i - 1], points[i]);
+        if (!hit) continue;
+        if (!best || hit.u < best.hit.u) best = { hit, j };
+      }
+      if (best) return [best.hit.point, ...points.slice(best.j + 1, i)];
+    }
+    return null;
+  }
+
+  function firstClosingLoop(points) {
+    const last = points[points.length - 1];
+    const first = points[0];
+    let best = null;
+
+    for (let j = 0; j < points.length - 2; j++) {
+      const hit = segmentIntersection(last, first, points[j], points[j + 1]);
+      if (!hit) continue;
+      if (!best || hit.t < best.hit.t) best = { hit, j };
+    }
+
+    return best ? [best.hit.point, ...points.slice(best.j + 1)] : null;
+  }
+
+  function compactPoints(points) {
+    return points.reduce((acc, p) => {
+      if (!acc.length || pointDistance2(acc[acc.length - 1], p) > 0.01) acc.push(p);
+      return acc;
+    }, []);
+  }
+
+  function finalizeLasso(points) {
+    const clean = compactPoints(points);
+    if (clean.length < 3) return null;
+
+    const loop = firstSelfIntersectionLoop(clean) || firstClosingLoop(clean) || clean;
+    const polygon = compactPoints(loop);
+    if (polygon.length > 2 && pointDistance2(polygon[0], polygon[polygon.length - 1]) < 0.01) {
+      polygon.pop();
+    }
+    if (polygon.length < 3 || Math.abs(d3.polygonArea(polygon)) < LASSO_MIN_AREA) return null;
+
+    return {
+      points: polygon,
+      bounds: polygonBounds(polygon)
+    };
+  }
 
   // ── Explorer map helpers ──
   function initEMap(sel) {
@@ -1228,12 +1367,73 @@ function initExplorer() {
     node._rafId = null;
 
     svg.append('path').datum(LAND).attr('class','country-stroke').attr('d',pathGen);
-    svg.append('g').attr('class','region-hl-layer');
+    svg.append('g').attr('class','region-hl-layer').attr('clip-path', `url(#${clipId})`);
     if (state.feature !== 'siconc') {
-      const brushG = svg.append('g').attr('class','region-brush');
-      const brush = d3.brush().extent([[0,0],[MAP_W,MAP_H]]).on('end', ev => eBrushEnd(ev, brushG, brush));
-      brushG.call(brush);
+      initLasso(svg);
     }
+  }
+
+  function initLasso(svg) {
+    let drawing = false;
+    let points = [];
+
+    const g = svg.append('g').attr('class','region-lasso');
+    const draft = g.append('path').attr('class','region-lasso-draft');
+    const capture = g.append('rect')
+      .attr('class','region-lasso-capture')
+      .attr('width',MAP_W)
+      .attr('height',MAP_H);
+
+    function addPoint(event, force = false) {
+      const p = clampMapPoint(d3.pointer(event, svg.node()));
+      const last = points[points.length - 1];
+      if (force || !last || pointDistance2(last, p) >= LASSO_MIN_DIST2) points.push(p);
+      return p;
+    }
+
+    function start(event) {
+      if (event.button !== 0 || state.feature === 'siconc') return;
+      event.preventDefault();
+      stopPlay();
+      drawing = true;
+      points = [];
+      addPoint(event, true);
+      draft
+        .attr('stroke', REGION_COLORS[state.regions.length % REGION_COLORS.length])
+        .attr('d', pathFromPoints(points));
+      capture.node().setPointerCapture?.(event.pointerId);
+    }
+
+    function move(event) {
+      if (!drawing) return;
+      event.preventDefault();
+      addPoint(event);
+      draft.attr('d', pathFromPoints(points));
+    }
+
+    function finish(event) {
+      if (!drawing) return;
+      event.preventDefault();
+      drawing = false;
+      addPoint(event, true);
+      capture.node().releasePointerCapture?.(event.pointerId);
+      draft.attr('d', null);
+
+      const region = finalizeLasso(points);
+      if (!region) return;
+
+      state.regions.push(region);
+      state.regions = state.regions.slice(-2);
+      updateRegionUI();
+      redrawE(400);
+      drawELine();
+    }
+
+    capture
+      .on('pointerdown', start)
+      .on('pointermove', move)
+      .on('pointerup', finish)
+      .on('pointercancel', finish);
   }
 
   function updateEMap(sel, decade, duration = 0) {
@@ -1250,27 +1450,10 @@ function initExplorer() {
     if (!state.regions.length || state.feature==='siconc') return;
     state.regions.forEach((r,idx) => {
       const c = REGION_COLORS[idx];
-      const corners = [[r.lon0,r.lat1],[r.lon1,r.lat1],[r.lon1,r.lat0],[r.lon0,r.lat0]].map(p=>projection(p));
-      if (corners.some(p=>!p)) return;
-      const xs=corners.map(p=>p[0]),ys=corners.map(p=>p[1]);
-      svg.select('.region-hl-layer').append('rect').attr('class','region-highlight')
-        .attr('x',Math.min(...xs)).attr('y',Math.min(...ys))
-        .attr('width',Math.max(...xs)-Math.min(...xs)).attr('height',Math.max(...ys)-Math.min(...ys))
+      svg.select('.region-hl-layer').append('path').attr('class','region-highlight')
+        .attr('d', pathFromPoints(r.points, true))
         .attr('fill',c).attr('stroke',c);
     });
-  }
-
-  function eBrushEnd(event, brushG, brush) {
-    if (!event.selection) return;
-    const [[x0,y0],[x1,y1]] = event.selection;
-    const p0=projection.invert([x0,y0]), p1=projection.invert([x1,y1]);
-    if (!p0||!p1) return;
-    state.regions.push({lon0:Math.min(p0[0],p1[0]),lon1:Math.max(p0[0],p1[0]),lat0:Math.min(p0[1],p1[1]),lat1:Math.max(p0[1],p1[1])});
-    state.regions = state.regions.slice(-2);
-    updateRegionUI();
-    brushG.call(brush.move, null);
-    redrawE(400);
-    drawELine();
   }
 
   function updateRegionUI() {
@@ -1314,11 +1497,15 @@ function initExplorer() {
       const field=getField(feature,scen,dec); if (!field) return null;
       let sum=0, wt=0;
       DATA.meta.lat.forEach((la,i) => {
-        if (la<region.lat0||la>region.lat1) return;
         const w=Math.cos(la*Math.PI/180);
         DATA.meta.lon.forEach((lo,j) => {
-          if (lo<region.lon0||lo>region.lon1) return;
-          sum+=field[i][j]*w; wt+=w;
+          const p = projection([lo, la]);
+          if (!p) return;
+          if (p[0] < region.bounds.x0 || p[0] > region.bounds.x1 || p[1] < region.bounds.y0 || p[1] > region.bounds.y1) return;
+          if (!d3.polygonContains(region.points, p)) return;
+          const v = field[i][j];
+          if (!Number.isFinite(v)) return;
+          sum+=v*w; wt+=w;
         });
       });
       return wt>0?{year:dec+5,value:sum/wt}:null;
