@@ -12,7 +12,11 @@ const INJUSTICE_COLORS = {
 };
 
 // Chapter 3 equatorial precipitation-risk overlay colors.
-
+// Chapter 3 equatorial precipitation-risk overlay colors.
+const PRECIP_RISK_COLORS = {
+  dry: '#0b0b0b',
+  wet: '#0b0b0b'
+};
 const SCALES = {
   tas:    { domain: [-2, 8],    interp: d3.interpolateRdBu,  reverse: true,  label: 'Δ°C',     fmt: d => d3.format('+.1f')(d) + '°C' },
   pr:     { domain: [-30, 30],  interp: d3.interpolateBrBG,  reverse: false, label: 'Δ% precip', fmt: d => d3.format('+.0f')(d) + '%' },
@@ -775,8 +779,22 @@ function initCh3PrecipRisk() {
   precipLayer.selectAll('*').remove();
 
   const zones = [
-    { cls: 'precip-dry', label: 'Much drier', latLim: 25, test: v => v <= -25 },
-    { cls: 'precip-wet', label: 'Much wetter', latLim: 25, test: v => v >= 25  }
+    {
+      cls: 'precip-dry',
+      label: 'Much drier',
+      latLim: 25,
+      test: v => v <= -25,
+      fill: PRECIP_RISK_COLORS.dry,
+      op: 0.72
+    },
+    {
+      cls: 'precip-wet',
+      label: 'Much wetter',
+      latLim: 25,
+      test: v => v >= 25,
+      fill: PRECIP_RISK_COLORS.wet,
+      op: 0.72
+    }
   ];
 
   zones.forEach(z => {
@@ -797,9 +815,9 @@ function initCh3PrecipRisk() {
       .attr('y', d => d.y)
       .attr('width', d => Math.max(0.5, d.w + 0.5))
       .attr('height', d => Math.max(0.5, d.h + 0.5))
-      .attr('fill', d => colorFor(field[d.i][d.j], 'pr'))
-      .attr('fill-opacity', 1)
-      .attr('stroke', d => colorFor(field[d.i][d.j], 'pr'))
+      .attr('fill', z.fill)
+      .attr('fill-opacity', z.op)
+      .attr('stroke', 'rgba(255,255,255,0.55)')
       .attr('stroke-width', 0.25)
       .attr('pointer-events', 'none');
   });
@@ -1069,7 +1087,13 @@ function showCountryDetail(feature) {
         <div class="emissions-bar-track">
           <div class="emissions-bar-fill" style="width:${Math.min(100, cumCo2/maxCum*100).toFixed(1)}%"></div>
         </div>
-        <span class="emissions-bar-label">${sharePct < 0.1 ? '<0.1' : sharePct.toFixed(1)}% of global cumulative CO₂</span>
+        <span class="emissions-bar-label">
+  ${sharePct < 0.1 ? '<0.1' : sharePct.toFixed(1)}% of global cumulative CO₂
+</span>
+
+<p class="emissions-bar-caption">
+  Bar length is scaled relative to the highest cumulative emitter, not the full global total.
+</p>
       </div>
       <div class="warming-stats">
         <div class="wstat">
@@ -1245,30 +1269,41 @@ function initScrollSpy() {
   };
 
   let lastCh4Step = null;
-  function checkCh4() {
-    const scrollY = window.scrollY;
-    const scrollingDown = scrollY >= lastScrollY;
-    const triggerY = window.innerHeight * 0.4;
-    let active = ch4Steps[0];
-    ch4Steps.forEach(s => {
-      if (s.getBoundingClientRect().top <= triggerY) active = s;
-    });
-    if (!active || active === lastCh4Step) return;
-    const newIdx = [...ch4Steps].indexOf(active);
-    const curIdx = [...ch4Steps].indexOf(lastCh4Step ?? ch4Steps[0]);
-    if (scrollingDown && newIdx < curIdx) return;
-    if (!scrollingDown && newIdx > curIdx) return;
-    lastCh4Step = active;
-    ch4Steps.forEach(s => s.classList.remove('active'));
-    active.classList.add('active');
-    const mode = active.dataset.mode;
-    showWetBulb(mode === 'wetbulb');
-    showInjustice(mode === 'injustice');
-    const lbl = document.getElementById('ch4-map-label');
-    if (lbl) lbl.textContent = CH4_LABELS[mode] || 'Temperature Anomaly · 2090s · Who Gets Hit Hardest';
+
+function checkCh4() {
+  const triggerY = window.innerHeight * 0.45;
+  let active = ch4Steps[0];
+
+  ch4Steps.forEach(s => {
+    const rect = s.getBoundingClientRect();
+
+    if (rect.top <= triggerY) {
+      active = s;
+    }
+  });
+
+  if (!active || active === lastCh4Step) return;
+
+  lastCh4Step = active;
+
+  ch4Steps.forEach(s => s.classList.remove('active'));
+  active.classList.add('active');
+
+  const mode = active.dataset.mode || 'base';
+
+  showWetBulb(mode === 'wetbulb');
+  showInjustice(mode === 'injustice');
+
+  const lbl = document.getElementById('ch4-map-label');
+  if (lbl) {
+    lbl.textContent =
+      CH4_LABELS[mode] ||
+      'Temperature Anomaly · 2090s · Who Gets Hit Hardest';
   }
-  window.addEventListener('scroll', checkCh4, { passive: true });
-  checkCh4();
+}
+
+window.addEventListener('scroll', checkCh4, { passive: true });
+checkCh4();
 
   const fadeObs = new IntersectionObserver(entries => {
     entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('active'); });

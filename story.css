@@ -1449,3 +1449,228 @@ select {
     padding: 64px 22px;
   }
 }
+
+.map-label {
+  color: #f8fafc;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.75);
+  background: rgba(5, 10, 18, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  padding: 8px 12px;
+  display: inline-block;
+  backdrop-filter: blur(6px);
+}
+
+.map-scenario-note {
+  color: #e5e7eb;
+  font-size: 13px;
+  line-height: 1.45;
+  background: rgba(5, 10, 18, 0.68);
+  border-left: 3px solid rgba(255, 255, 255, 0.45);
+  border-radius: 8px;
+  padding: 8px 11px;
+  margin: 8px 0 10px;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.7);
+}
+
+.impact-legend {
+  color: #f8fafc;
+  font-size: 13px;
+  line-height: 1.45;
+  font-weight: 500;
+  background: rgba(5, 10, 18, 0.76);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  padding: 9px 12px;
+  margin-top: 8px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(6px);
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.65);
+}
+
+.impact-legend span {
+  color: #f8fafc;
+  display: inline-block;
+  margin-right: 14px;
+}
+
+.precip-risk-legend {
+  border-left: 4px solid #0b0b0b;
+}
+
+.scatter-note,
+#notes-body {
+  color: #e5e7eb;
+  font-size: 13px;
+  line-height: 1.55;
+  background: rgba(5, 10, 18, 0.68);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-top: 10px;
+}
+
+.scatter-axis-label {
+  fill: #e5e7eb;
+  font-weight: 600;
+}
+
+.axis text,
+.legend-axis text {
+  fill: #d1d5db;
+  font-size: 11px;
+}
+
+.axis path,
+.axis line,
+.legend-axis path,
+.legend-axis line {
+  stroke: rgba(255, 255, 255, 0.35);
+}
+
+#ch4 .step {
+  opacity: 0.32;
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+#ch4 .step.active {
+  opacity: 1;
+}
+
+.country-emissions-below-map {
+  display: none;
+  width: 100%;
+}
+
+.country-emissions-below-map .emissions-card {
+  margin-top: 0;
+  background: rgba(5, 10, 18, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 16px;
+  padding: 16px 18px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.32);
+}
+
+.emissions-bar-wrap {
+  margin: 14px 0 12px;
+}
+
+.emissions-bar-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+  color: #f8fafc;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.emissions-bar-title strong {
+  color: #22c55e;
+  font-family: var(--mono);
+  font-size: 18px;
+}
+
+.emissions-bar-track {
+  position: relative;
+  width: 100%;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.emissions-bar-fill {
+  height: 100%;
+  background: #22c55e;
+  border-radius: 999px;
+}
+
+.emissions-bar-scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 7px;
+  color: #d1d5db;
+  font-size: 11px;
+  font-family: var(--mono);
+}
+
+.emissions-bar-caption {
+  margin: 9px 0 0;
+  color: #e5e7eb;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+/* Make emissions card captions and values more readable */
+.country-emissions-below-map .risk-label,
+.emissions-card .risk-label {
+  color: #f8fafc;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.country-emissions-below-map .risk-badge,
+.emissions-card .risk-badge {
+  font-size: 12px;
+  font-weight: 800;
+  padding: 5px 9px;
+  border-width: 1.5px;
+  text-shadow: none;
+}
+
+.country-emissions-below-map .emissions-bar-label,
+.emissions-card .emissions-bar-label {
+  display: block;
+  margin-top: 8px;
+  color: #f8fafc;
+  font-size: 14px;
+  font-weight: 800;
+  font-family: var(--mono);
+  letter-spacing: 0.01em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.85);
+}
+
+.country-emissions-below-map .wstat,
+.emissions-card .wstat {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.country-emissions-below-map .wstat-val,
+.emissions-card .wstat-val {
+  color: #f8fafc !important;
+  font-size: 18px;
+  font-weight: 850;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.75);
+}
+
+.country-emissions-below-map .wstat-lbl,
+.emissions-card .wstat-lbl {
+  color: #e5e7eb;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.75);
+}
+
+.country-emissions-below-map .emissions-bar-caption,
+.emissions-card .emissions-bar-caption {
+  color: #f1f5f9;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+  background: rgba(5, 10, 18, 0.72);
+  border-left: 4px solid rgba(34, 197, 94, 0.85);
+  border-radius: 9px;
+  padding: 8px 10px;
+  margin-top: 9px;
+}
