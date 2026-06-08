@@ -645,6 +645,58 @@ select {
   color: var(--ink-faint);
 }
 
+.ch6-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+
+#country-emissions-panel {
+  border: 1px solid rgba(34,197,94,.2);
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  background: rgba(34,197,94,.04);
+  padding: 14px 16px;
+}
+
+#country-emissions-panel .emissions-card {
+  border: none;
+  background: none;
+  margin-top: 0;
+  padding: 0;
+}
+
+.emissions-card {
+  border-color: rgba(34,197,94,.2);
+}
+
+.emissions-bar-wrap {
+  margin: 10px 0 4px;
+}
+
+.emissions-bar-track {
+  height: 6px;
+  background: rgba(255,255,255,.06);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 5px;
+}
+
+.emissions-bar-fill {
+  height: 100%;
+  background: #22c55e;
+  border-radius: 3px;
+  min-width: 2px;
+}
+
+.emissions-bar-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .1em;
+  color: var(--ink-faint);
+}
+
 /* ── EXPLORER ──────────────────────────────────────────────────────────────── */
 #explorer {
   padding: 86px 64px;

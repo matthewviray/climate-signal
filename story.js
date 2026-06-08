@@ -717,43 +717,6 @@ function initStoryMaps() {
   });
 }
 
-// Animate smoothly through intermediate decades from current → target
-function updateStoryMap(chId, targetDecade) {
-  const cfg = STORY_CFG[chId];
-  if (!cfg || cfg.fixedDecade) return;
-
-  const fromDecade = storyCurrentDecade[chId];
-  if (fromDecade === targetDecade) return;
-
-  // Build list of decades to step through (exclusive of from, inclusive of to)
-  const step = fromDecade < targetDecade ? 10 : -10;
-  const frames = [];
-  for (let d = fromDecade + step; d !== targetDecade + step; d += step) frames.push(d);
-
-  // Calculate per-frame duration so total stays ~1.1s regardless of distance
-  const perFrame = Math.max(180, Math.min(500, Math.floor(1100 / frames.length)));
-
-  // Cancel any in-flight animation for this chapter
-  const token = ++storyAnimToken[chId];
-
-  let idx = 0;
-  function tick() {
-    if (storyAnimToken[chId] !== token) return;
-    if (idx >= frames.length) return;
-
-    const dec = frames[idx];
-    const field = getField(cfg.feature, cfg.scen, dec);
-    if (field) drawCells(d3.select(cfg.svgId), field, cfg.feature, perFrame);
-    if (cfg.badgeId) animateBadge(cfg.badgeId, `${dec}s`);
-
-    idx++;
-    if (idx < frames.length) setTimeout(tick, perFrame + 20);
-  }
-
-  storyCurrentDecade[chId] = targetDecade;
-  tick();
-}
-
 function animateBadge(sel, text) {
   const el = d3.select(sel);
   el.transition().duration(120).style('opacity', 0)
@@ -1085,6 +1048,41 @@ function showCountryDetail(feature) {
   const risk = getWetBulbRisk(lat, w585);
   const narrative = buildCountryNarrative(name, lat, w585, w126, pr585);
 
+  // Emissions lookup
+  const emKey = canonicalCountryName(name);
+  const emRec = EMISSIONS_BY_KEY.get(emKey);
+  const globalCumulative = d3.sum(EMISSIONS_COUNTRIES, d => d.cumulativeCo2 || 0);
+  const cumCo2    = emRec?.cumulativeCo2 ?? 0;
+  const annualCo2 = emRec?.presentCo2   ?? 0;
+  const sharePct  = globalCumulative > 0 ? (cumCo2 / globalCumulative * 100) : 0;
+  const sortedCum = [...EMISSIONS_COUNTRIES].filter(d => d.cumulativeCo2 > 0).sort((a,b) => b.cumulativeCo2 - a.cumulativeCo2);
+  const rank      = sortedCum.findIndex(d => d.key === emKey) + 1;
+  const maxCum    = sortedCum[0]?.cumulativeCo2 ?? 1;
+
+  const emissionsHTML = emRec ? `
+    <div class="climate-risk-card emissions-card">
+      <div class="risk-row">
+        <span class="risk-label">Historical CO₂ responsibility</span>
+        ${MAJOR_EMITTER_IDS.has(id) ? `<span class="risk-badge" style="background:rgba(34,197,94,.12);color:#22c55e;border-color:rgba(34,197,94,.35)">Major emitter</span>` : ''}
+      </div>
+      <div class="emissions-bar-wrap">
+        <div class="emissions-bar-track">
+          <div class="emissions-bar-fill" style="width:${Math.min(100, cumCo2/maxCum*100).toFixed(1)}%"></div>
+        </div>
+        <span class="emissions-bar-label">${sharePct < 0.1 ? '<0.1' : sharePct.toFixed(1)}% of global cumulative CO₂</span>
+      </div>
+      <div class="warming-stats">
+        <div class="wstat">
+          <span class="wstat-val" style="color:var(--ink)">${d3.format(',.0f')(cumCo2)} Mt</span>
+          <span class="wstat-lbl">Cumulative CO₂ · all time${rank > 0 ? ` · #${rank} globally` : ''}</span>
+        </div>
+        <div class="wstat">
+          <span class="wstat-val" style="color:var(--ink)">${d3.format(',.0f')(annualCo2)} Mt</span>
+          <span class="wstat-lbl">Annual CO₂ · latest year</span>
+        </div>
+      </div>
+    </div>` : `<div class="climate-risk-card emissions-card"><p style="color:var(--ink-faint);font-size:13px;">No emissions data available for this territory.</p></div>`;
+
   const summary = document.getElementById('country-climate-summary');
   if (!summary) return;
   summary.innerHTML = `
@@ -1110,6 +1108,14 @@ function showCountryDetail(feature) {
       </div>
       <p class="climate-narrative">${narrative}</p>
     </div>`;
+
+  drawCountryLine({ hist, s126, s245, s585 });
+
+  const emPanel = document.getElementById('country-emissions-panel');
+  if (emPanel) {
+    emPanel.style.display = 'block';
+    emPanel.innerHTML = emissionsHTML;
+  }
 }
 
 function drawCountryLine({hist, s126, s245, s585}) {
@@ -1162,42 +1168,75 @@ function initChapterNav() {
 
 // ── SCROLL SPY ────────────────────────────────────────────────────────────────
 function initScrollSpy() {
-  const stepObs = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-      if (!entry.isIntersecting) return;
+  const lastActive = {};
+  let lastScrollY = window.scrollY;
 
-      const step = entry.target;
-      const chEl = step.closest('.chapter');
-      if (!chEl) return;
+  // Activate the text step (CSS highlight + overlays) — no map update here
+  function activateStep(step, chEl) {
+    if (lastActive[chEl.id] === step) return;
+    lastActive[chEl.id] = step;
 
-      chEl.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
-      step.classList.add('active');
+    chEl.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    step.classList.add('active');
 
-      const decade = parseInt(step.dataset.decade);
-      const mode = step.dataset.mode || 'base';
+    const mode = step.dataset.mode || 'base';
 
-      if (!isNaN(decade)) {
-        updateStoryMap(chEl.id, decade);
+    if (chEl.id === 'ch3') {
+      showPrecipRisk(mode === 'precip-risk');
+      const label = chEl.querySelector('.map-label');
+      if (label) {
+        const prefix = mode === 'precip-risk'
+          ? 'Equatorial High-Precipitation Anomaly'
+          : 'Precipitation Anomaly';
+        label.innerHTML = `${prefix} · <span id="ch3-decade"></span>`;
       }
+    } else {
+      showPrecipRisk(false);
+    }
+  }
 
-      // Chapter 3 precipitation-risk overlay, implemented like the wet-bulb overlay.
-      if (chEl.id === 'ch3') {
-        showPrecipRisk(mode === 'precip-risk');
+  // Update map + badge based on exact scroll position within the chapter
+  function updateChapterDecade(chEl) {
+    const cfg = STORY_CFG[chEl.id];
+    if (!cfg || cfg.fixedDecade) return;
 
-        const label = chEl.querySelector('.map-label');
-        if (label) {
-          const decadeText = !isNaN(decade) ? `${decade}s` : '2090s';
-          label.innerHTML = mode === 'precip-risk'
-            ? `Equatorial High-Precipitation Anomaly · <span id="ch3-decade">${decadeText}</span>`
-            : `Precipitation Anomaly · <span id="ch3-decade">${decadeText}</span>`;
-        }
-      } else {
-        showPrecipRisk(false);
+    const rect     = chEl.getBoundingClientRect();
+    const scrollable = chEl.offsetHeight - window.innerHeight;
+    const progress   = scrollable > 0 ? Math.max(0, Math.min(1, -rect.top / scrollable)) : 0;
+    const decade     = Math.round((2020 + progress * 70) / 10) * 10; // 2020–2090
+
+    if (decade === storyCurrentDecade[chEl.id]) return;
+    storyCurrentDecade[chEl.id] = decade;
+
+    const field = getField(cfg.feature, cfg.scen, decade);
+    if (field) drawCells(d3.select(cfg.svgId), field, cfg.feature, 250);
+
+    // Update whichever badge element exists
+    if (cfg.badgeId) d3.select(cfg.badgeId).text(`${decade}s`);
+  }
+
+  function checkSteps() {
+    lastScrollY = window.scrollY;
+    const triggerY = window.innerHeight * 0.4;
+
+    document.querySelectorAll('.chapter').forEach(chEl => {
+      const steps = [...chEl.querySelectorAll('.step[data-decade]')];
+      if (!steps.length) return;
+
+      // Text step: last step whose top has passed 40% down the viewport
+      let active = steps[0];
+      for (const s of steps) {
+        if (s.getBoundingClientRect().top <= triggerY) active = s;
       }
+      activateStep(active, chEl);
+
+      // Map decade: continuous from scroll position, no discrete jumps
+      updateChapterDecade(chEl);
     });
-  }, { threshold: 0.55 });
+  }
 
-  document.querySelectorAll('.step[data-decade]').forEach(s => stepObs.observe(s));
+  window.addEventListener('scroll', checkSteps, { passive: true });
+  checkSteps();
 
   const ch4Steps = document.querySelectorAll('#ch4 .step');
   const CH4_LABELS = {
@@ -1205,23 +1244,31 @@ function initScrollSpy() {
     injustice: 'Climate Injustice · 2090s · Impact vs. Responsibility',
   };
 
-  const ch4Obs = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-      if (!entry.isIntersecting) return;
-
-      ch4Steps.forEach(s => s.classList.remove('active'));
-      entry.target.classList.add('active');
-
-      const mode = entry.target.dataset.mode;
-      showWetBulb(mode === 'wetbulb');
-      showInjustice(mode === 'injustice');
-
-      const lbl = document.getElementById('ch4-map-label');
-      if (lbl) lbl.textContent = CH4_LABELS[mode] || 'Temperature Anomaly · 2090s · Who Gets Hit Hardest';
+  let lastCh4Step = null;
+  function checkCh4() {
+    const scrollY = window.scrollY;
+    const scrollingDown = scrollY >= lastScrollY;
+    const triggerY = window.innerHeight * 0.4;
+    let active = ch4Steps[0];
+    ch4Steps.forEach(s => {
+      if (s.getBoundingClientRect().top <= triggerY) active = s;
     });
-  }, { threshold: 0.55 });
-
-  ch4Steps.forEach(s => ch4Obs.observe(s));
+    if (!active || active === lastCh4Step) return;
+    const newIdx = [...ch4Steps].indexOf(active);
+    const curIdx = [...ch4Steps].indexOf(lastCh4Step ?? ch4Steps[0]);
+    if (scrollingDown && newIdx < curIdx) return;
+    if (!scrollingDown && newIdx > curIdx) return;
+    lastCh4Step = active;
+    ch4Steps.forEach(s => s.classList.remove('active'));
+    active.classList.add('active');
+    const mode = active.dataset.mode;
+    showWetBulb(mode === 'wetbulb');
+    showInjustice(mode === 'injustice');
+    const lbl = document.getElementById('ch4-map-label');
+    if (lbl) lbl.textContent = CH4_LABELS[mode] || 'Temperature Anomaly · 2090s · Who Gets Hit Hardest';
+  }
+  window.addEventListener('scroll', checkCh4, { passive: true });
+  checkCh4();
 
   const fadeObs = new IntersectionObserver(entries => {
     entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('active'); });
